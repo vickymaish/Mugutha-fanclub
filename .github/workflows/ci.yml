@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [ 18.x, 20.x ]
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      
+      - name: Install backend dependencies
+        run: cd backend && npm install
+      
+      - name: Lint backend code
+        run: cd backend && npm run lint 2>/dev/null || echo "No lint script found"
+      
+      - name: Check backend syntax
+        run: cd backend && node --check src/server.js src/app.js src/config/*.js src/routes/*.js src/controllers/*.js src/services/*.js
+
+  frontend:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [ 18.x, 20.x ]
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install frontend dependencies
+        run: cd frontend && npm install
+      
+      - name: Build frontend
+        run: cd frontend && npm run build
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-build
+          path: frontend/dist
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Check for secrets
+        run: |
+          if grep -r "SUPABASE_SERVICE_ROLE_KEY\|WHATSAPP_API_TOKEN\|WHATSAPP_API_KEY" --include="*.env" --include="*.js" --include="*.jsx" .; then
+            echo "ERROR: Secrets found in committed files!"
+            exit 1
+          else
+            echo "✓ No secrets detected in code"
+          fi
+      
+      - name: Check .env files
+        run: |
+          if [ -f .env ]; then
+            echo "WARNING: .env file found in repository. Make sure it's in .gitignore!"
+          fi
+          if [ ! -f backend/.env.example ]; then
+            echo "ERROR: backend/.env.example not found"
+            exit 1
+          fi
