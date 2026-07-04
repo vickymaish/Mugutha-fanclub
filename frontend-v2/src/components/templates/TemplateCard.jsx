@@ -36,12 +36,7 @@ export default function TemplateCard({ template, onEdit, onDelete }) {
 
       <div className="template-preview">
         <p className="template-message">
-        {template.message.split('\n').map((line, i) => (
-        <React.Fragment key={i}>
-        {line}
-        {i < template.message.split('\n').length - 1 && <br />}
-        </React.Fragment>
-            ))}
+        {template.message?.replace(/\\n/g, '\n')}
         </p>
         {template.subject && (
           <span className="template-subject">Subject: {template.subject}</span>

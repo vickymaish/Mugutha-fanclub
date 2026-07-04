@@ -1610,6 +1610,8 @@ td:first-child {
 }
 
 .template-message {
+  white-space: pre-wrap;      /* Preserves newlines and wraps text */
+  word-break: break-word;
   margin: 0;
   font-size: 13px;
   color: var(--navy);
