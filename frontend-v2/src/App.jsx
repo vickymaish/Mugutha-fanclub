@@ -11,9 +11,9 @@ import './styles.css'
 
 function App() {
   return (
-    <div className="app-container">
+    <div className="dashboard-shell">
       <Sidebar />
-      <main className="main-content">
+      <main className="content">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/members" element={<Members />} />
