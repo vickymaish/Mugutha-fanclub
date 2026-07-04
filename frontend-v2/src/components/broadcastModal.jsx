@@ -62,7 +62,9 @@ export default function BroadcastModal({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || JSON.stringify(data));
 
-      const membersSent = data.membersSent ?? data.recipients ?? (data.results && data.results.sent) ?? 0;
+      const membersSent = data.sent ?? 0;
+      const membersFailed = data.failed ?? 0;
+      
       setSentSummary({ membersSent, results: data.results || {} });
       if (onSend) onSend(data);
       // brief success then close

@@ -4,6 +4,9 @@ Full-stack member management and WhatsApp broadcast platform for Mugutha FC. Bui
 
 ## Quick Start
 
+## Frontend
+- `frontend/` — original Copilot scaffold (reference only, not actively maintained)
+- `frontend-v2/` — active dashboard (React + Vite, run this one)
 ### Prerequisites
 - Node.js 18+ (tested on v24.x)
 - Supabase account with API key & service role key
