@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
-import api from '../services/api'
+// frontend/src/components/BroadcastForm.jsx
+import React, { useState } from 'react';
+import api from '../services/api';
 
 export default function BroadcastForm() {
   // Broadcast section state
@@ -90,61 +91,129 @@ export default function BroadcastForm() {
 
   return (
     <div>
-      <div style={{ marginBottom: '1rem' }}>
-        <h3>Broadcast to all members</h3>
+      {/* Broadcast to all members section */}
+      <div style={{ marginBottom: 'var(--spacing-36)' }}>
+        <h2 style={{ 
+          fontSize: 'var(--text-subheading)', 
+          marginBottom: 'var(--spacing-20)',
+          fontFamily: 'var(--font-polysans)',
+          fontWeight: 'var(--font-weight-semibold)'
+        }}>
+          Broadcast to all members
+        </h2>
+        
         <input
           type="text"
-          placeholder="Broadcast title"
+          className="input"
+          placeholder="Broadcast title (e.g., Hate watch Arsenal)"
           value={broadcastTitle}
           onChange={e => setBroadcastTitle(e.target.value)}
-          style={{ width: '100%', marginBottom: '0.5rem' }}
+          style={{ marginBottom: 'var(--spacing-16)' }}
         />
+        
         <textarea
+          className="input"
           placeholder="Broadcast message"
           value={broadcastMessage}
           onChange={e => setBroadcastMessage(e.target.value)}
           rows={4}
-          style={{ width: '100%', marginBottom: '0.5rem' }}
+          style={{ marginBottom: 'var(--spacing-16)' }}
         />
+        
         <input
           type="datetime-local"
+          className="input"
           value={scheduledFor}
           onChange={e => setScheduledFor(e.target.value)}
-          style={{ width: '100%', marginBottom: '0.5rem' }}
+          style={{ marginBottom: 'var(--spacing-20)' }}
         />
-        <button onClick={handleSendNow} disabled={isLoading}>Send now to all members</button>
-        <button onClick={handleSchedule} disabled={isLoading} style={{ marginLeft: '0.5rem' }}>
-          Schedule broadcast
-        </button>
+        
+        <div style={{ display: 'flex', gap: 'var(--spacing-16)', flexWrap: 'wrap' }}>
+          <button 
+            className="btn-primary" 
+            onClick={handleSendNow} 
+            disabled={isLoading}
+            style={{ opacity: isLoading ? 0.7 : 1 }}
+          >
+            Send now to all members
+          </button>
+          <button 
+            className="btn-primary" 
+            onClick={handleSchedule} 
+            disabled={isLoading}
+            style={{ 
+              opacity: isLoading ? 0.7 : 1,
+              backgroundColor: 'var(--color-slate)' // different color for schedule button
+            }}
+          >
+            Schedule broadcast
+          </button>
+        </div>
       </div>
 
-      <div style={{ marginBottom: '1rem' }}>
-        <h3>Send a test WhatsApp message</h3>
+      <hr style={{ margin: 'var(--spacing-36) 0', borderColor: 'var(--color-chalk)' }} />
+
+      {/* Send a test WhatsApp message section */}
+      <div>
+        <h2 style={{ 
+          fontSize: 'var(--text-subheading)', 
+          marginBottom: 'var(--spacing-20)',
+          fontFamily: 'var(--font-polysans)',
+          fontWeight: 'var(--font-weight-semibold)'
+        }}>
+          Send a test WhatsApp message
+        </h2>
+        
         <input
           type="text"
-          placeholder="Phone number (e.g. 254712345678)"
+          className="input"
+          placeholder="Phone number (e.g., 254712345678)"
           value={testPhone}
           onChange={e => setTestPhone(e.target.value)}
-          style={{ width: '100%', marginBottom: '0.5rem' }}
+          style={{ marginBottom: 'var(--spacing-16)' }}
         />
+        
         <input
           type="text"
+          className="input"
           placeholder="Test message title (optional)"
           value={testTitle}
           onChange={e => setTestTitle(e.target.value)}
-          style={{ width: '100%', marginBottom: '0.5rem' }}
+          style={{ marginBottom: 'var(--spacing-16)' }}
         />
+        
         <textarea
+          className="input"
           placeholder="Test message body"
           value={testMessage}
           onChange={e => setTestMessage(e.target.value)}
           rows={3}
-          style={{ width: '100%', marginBottom: '0.5rem' }}
+          style={{ marginBottom: 'var(--spacing-20)' }}
         />
-        <button onClick={handleTestSend} disabled={isLoading}>Send test message</button>
+        
+        <button 
+          className="btn-primary" 
+          onClick={handleTestSend} 
+          disabled={isLoading}
+          style={{ opacity: isLoading ? 0.7 : 1 }}
+        >
+          Send test message
+        </button>
       </div>
 
-      {feedback && <div style={{ marginTop: '1rem', color: '#333' }}>{feedback}</div>}
+      {feedback && (
+        <div style={{ 
+          marginTop: 'var(--spacing-20)', 
+          padding: 'var(--spacing-12) var(--spacing-16)',
+          backgroundColor: 'var(--surface-fog)',
+          borderRadius: 'var(--radius-sm)',
+          color: 'var(--color-carbon)',
+          fontFamily: 'var(--font-inter)',
+          fontSize: 'var(--text-caption)'
+        }}>
+          {feedback}
+        </div>
+      )}
     </div>
-  )
+  );
 }

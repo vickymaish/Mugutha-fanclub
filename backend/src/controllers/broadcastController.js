@@ -1,3 +1,5 @@
+// backend/src/controllers/broadcastController.js
+
 const {
   listBroadcasts,
   createBroadcast
@@ -30,7 +32,7 @@ exports.create = async (req, res, next) => {
 
 exports.sendBroadcast = async (req, res, next) => {
   try {
-    const { title, message, scheduled_for, send_now } = req.body;
+    const { title, message, tier, scheduled_for, send_now } = req.body;
 
     if (!title || !message) {
       return res.status(400).json({ error: 'title and message are required' });
@@ -40,6 +42,7 @@ exports.sendBroadcast = async (req, res, next) => {
     const payload = {
       title,
       message,
+      tier: tier || 'all',  // ✅ Store tier
       status: send_now ? 'sent' : scheduled_for ? 'scheduled' : 'draft',
       scheduled_for: scheduled_for ? new Date(scheduled_for).toISOString() : null,
       sent_at: send_now ? now.toISOString() : null,
@@ -53,6 +56,7 @@ exports.sendBroadcast = async (req, res, next) => {
       const result = await sendBroadcastNow(broadcast);
       return res.status(201).json({
         broadcast: result.broadcast,
+        tier: result.tier,
         recipients: result.membersSent,
         sent: result.results.sent,
         failed: result.results.failed,

@@ -1,11 +1,13 @@
-import React from 'react'
-import BroadcastForm from '../components/BroadcastForm'
+import React from 'react';
+import BroadcastForm from '../components/BroadcastForm';
 
-export default function Broadcasts(){
+export default function Broadcasts() {
   return (
-    <div className="container">
-      <h2>Broadcasts</h2>
-      <BroadcastForm />
+    <div className="page-container">
+      <h1>Broadcasts</h1>
+      <div className="card">
+        <BroadcastForm />
+      </div>
     </div>
-  )
+  );
 }

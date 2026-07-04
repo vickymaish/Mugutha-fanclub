@@ -1,7 +1,18 @@
 const supabase = require('../config/supabase');
 
-const MEMBER_FIELDS = 'id,name,phone,email,join_date,membership_status,created_at,updated_at';
-const BROADCAST_FIELDS = 'id,title,message,status,scheduled_for,sent_at,created_by,created_at';
+const MEMBER_FIELDS = `
+id,
+name,
+phone,
+email,
+join_date,
+membership_status,
+tier,
+amount_paid,
+created_at,
+updated_at
+`;
+const BROADCAST_FIELDS = 'id,title,message,tier,status,scheduled_for,sent_at,created_by,created_at';
 
 async function listMembers() {
   const { data, error } = await supabase.from('members').select(MEMBER_FIELDS).order('created_at', { ascending: false }).limit(100);
@@ -53,6 +64,17 @@ async function listAllMembers(status = null) {
   return data;
 }
 
+// ✅ NEW: Filter members by tier
+async function listMembersByTier(tier, status = 'active') {
+  let query = supabase.from('members').select(MEMBER_FIELDS).eq('tier', tier.toLowerCase());
+  if (status) {
+    query = query.eq('membership_status', status);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+}
+
 async function listBroadcasts() {
   const { data, error } = await supabase.from('broadcasts').select(BROADCAST_FIELDS).order('created_at', { ascending: false }).limit(50);
   if (error) throw error;
@@ -84,6 +106,7 @@ async function updateBroadcastStatus(id, status) {
   return data;
 }
 
+// ✅ SINGLE module.exports with ALL functions
 module.exports = {
   listMembers,
   createMember,
@@ -92,6 +115,7 @@ module.exports = {
   deleteMember,
   getExpiringMembers,
   listAllMembers,
+  listMembersByTier,  // ✅ NEW
   listBroadcasts,
   createBroadcast,
   insertMessage,

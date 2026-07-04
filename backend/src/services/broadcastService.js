@@ -1,4 +1,6 @@
-const { listAllMembers, updateBroadcastStatus } = require('../models/supabaseQueries');
+// backend/src/services/broadcastService.js
+
+const { listAllMembers, listMembersByTier, updateBroadcastStatus } = require('../models/supabaseQueries');
 const { sendMessage } = require('./whatsappService');
 
 async function sendBroadcastToMembers(broadcast, members) {
@@ -33,10 +35,29 @@ async function sendBroadcastToMembers(broadcast, members) {
 }
 
 async function sendBroadcastNow(broadcast) {
-  const members = await listAllMembers('active');
+  // ✅ Use tier to filter members
+  const tier = broadcast.tier || 'all';
+  let members;
+  
+  if (tier === 'all') {
+    members = await listAllMembers('active');
+  } else {
+    members = await listMembersByTier(tier, 'active');
+  }
+  
+  if (!members || members.length === 0) {
+    throw new Error(`No active members found for tier: ${tier}`);
+  }
+  
   const results = await sendBroadcastToMembers(broadcast, members);
   await updateBroadcastStatus(broadcast.id, 'sent');
-  return { broadcast, membersSent: members.length, results };
+  
+  return { 
+    broadcast, 
+    membersSent: members.length,
+    tier: tier,
+    results 
+  };
 }
 
 module.exports = {

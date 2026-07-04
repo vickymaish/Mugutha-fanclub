@@ -1,3 +1,84 @@
-body{font-family: Arial, sans-serif; margin:0; padding:0;}
-.nav{background:#0b74da;color:#fff;padding:12px}
-.container{padding:16px}
+/* frontend/src/styles/globals.css */
+@import './variables.css';
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-inter);
+  background-color: var(--surface-canvas);
+  color: var(--color-carbon);
+  line-height: var(--leading-body);
+}
+
+/* Utility container for pages */
+.page-container {
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  padding: var(--spacing-40);
+}
+
+/* Card style */
+.card {
+  background: var(--surface-paper);
+  border-radius: var(--radius-cards);
+  padding: var(--spacing-36);
+  margin-bottom: var(--spacing-20);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Primary button */
+.btn-primary {
+  background: var(--color-signal-orange);
+  color: white;
+  border: none;
+  border-radius: var(--radius-buttons);
+  padding: var(--spacing-12) var(--spacing-36);
+  font-family: var(--font-polysans);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--text-body);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+/* Inputs, textareas, selects */
+.input,
+textarea,
+select {
+  font-family: var(--font-inter);
+  font-size: var(--text-body);
+  padding: var(--spacing-12) var(--spacing-16);
+  border-radius: var(--radius-inputs);
+  border: 1px solid var(--color-chalk);
+  background: var(--surface-fog);
+  width: 100%;
+  outline: none;
+  transition: border 0.2s;
+}
+.input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-signal-orange);
+}
+
+/* Headings */
+h1, h2, h3 {
+  font-family: var(--font-polysans);
+  font-weight: var(--font-weight-semibold);
+}
+h1 {
+  font-size: var(--text-heading);
+  letter-spacing: var(--tracking-heading);
+  margin-bottom: var(--spacing-36);
+}
+h2 {
+  font-size: var(--text-subheading);
+  letter-spacing: var(--tracking-subheading);
+  margin-bottom: var(--spacing-20);
+}
