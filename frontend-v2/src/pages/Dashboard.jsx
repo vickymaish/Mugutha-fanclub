@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import BroadcastModal from '../components/BroadcastModal';
+import useMembers from "../hooks/useMembers";
+import useFixtures from "../hooks/useFixtures";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 function Icon({ children, size = 18 }) {
@@ -28,19 +30,13 @@ const Trophy        = (p) => <Icon {...p}><path d="M8 21h8"/><path d="M12 17v4"/
 const Upload        = (p) => <Icon {...p}><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14"/></Icon>;
 const Users         = (p) => <Icon {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.8"/><path d="M16 3.3a4 4 0 0 1 0 7.4"/></Icon>;
 
-// ── Static data ───────────────────────────────────────────────────────────
+// ── Static data for broadcasts (still hardcoded, can be replaced later) ──
 const BROADCASTS = [
   { type: 'Match alert',      audience: 'All members', time: 'Jun 22, 10:00', status: 'Delivered' },
   { type: 'Lineup update',    audience: 'Silver+',     time: 'Jun 22, 13:00', status: 'Read'      },
   { type: 'Merch drop',       audience: 'All members', time: 'Jun 18, 09:00', status: 'Delivered' },
   { type: 'Renewal reminder', audience: '4 expiring',  time: 'Jun 17, 08:00', status: 'Read'      },
   { type: 'Sponsor update',   audience: 'Gold tier',   time: 'Jun 15, 11:00', status: 'Pending'   },
-];
-
-const FIXTURES = [
-  { date: 'Sun 29 Jun', title: 'Mugutha FC vs Ruiru United', meta: 'Mugutha Grounds, 3:00 PM', action: 'Alert' },
-  { date: 'Sun 6 Jul',  title: 'Kiambu Stars vs Mugutha FC', meta: 'Away, 2:30 PM',            action: 'Draft' },
-  { date: 'Sun 13 Jul', title: 'Mugutha FC vs Thika Rovers', meta: 'Mugutha Grounds, 3:00 PM', action: 'Draft' },
 ];
 
 // ── Small components ──────────────────────────────────────────────────────
@@ -75,7 +71,6 @@ function QuickAction({ icon: Ic, title, subtitle, tone, onClick }) {
   );
 }
 
-// ── Toast ─────────────────────────────────────────────────────────────────
 function Toast({ message, type }) {
   if (!message) return null;
   return (
@@ -92,32 +87,25 @@ function Toast({ message, type }) {
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const [members,   setMembers]   = useState([]);
-  const [loading,   setLoading]   = useState(true);
+  const { members, loading: membersLoading } = useMembers();
+  const { fixtures, loading: fixturesLoading } = useFixtures();
+
   const [showModal, setShowModal] = useState(false);
   const [modalTier, setModalTier] = useState('all');
-  const [toast,     setToast]     = useState({ message: '', type: 'success' });
+  const [toast, setToast] = useState({ message: '', type: 'success' });
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast({ message: '', type: 'success' }), 3500);
   };
 
-  // Fetch members from live backend
-  useEffect(() => {
-    fetch('http://localhost:5000/api/members')
-      .then(r => r.json())
-      .then(data => { setMembers(Array.isArray(data) ? data : []); setLoading(false); })
-      .catch(err => { console.error('Failed to load members:', err); setLoading(false); });
-  }, []);
+  // ── Derived counts from members ──
+  const totalMembers = members.length;
+  const goldCount = members.filter(m => m.tier === 'gold').length;
+  const silverCount = members.filter(m => m.tier === 'silver').length;
+  const bronzeCount = members.filter(m => m.tier === 'bronze').length;
 
-  // Derived counts — no separate tierCounts endpoint needed
-  const totalMembers  = members.length;
-  const goldCount     = members.filter(m => m.tier === 'gold').length;
-  const silverCount   = members.filter(m => m.tier === 'silver').length;
-  const bronzeCount   = members.filter(m => m.tier === 'bronze').length;
-
-  const goldWidth   = totalMembers > 0 ? Math.round((goldCount   / totalMembers) * 100) : 0;
+  const goldWidth = totalMembers > 0 ? Math.round((goldCount / totalMembers) * 100) : 0;
   const silverWidth = totalMembers > 0 ? Math.round((silverCount / totalMembers) * 100) : 0;
   const bronzeWidth = totalMembers > 0 ? Math.round((bronzeCount / totalMembers) * 100) : 0;
 
@@ -126,6 +114,38 @@ export default function Dashboard() {
     const days = Math.ceil((new Date(m.renewal_date) - new Date()) / 86400000);
     return days <= 7 && days > 0;
   }).length;
+
+  // ── Derived counts from fixtures ──
+  const now = new Date();
+  const thisMonthFixtures = fixtures.filter(f => {
+    const matchDate = new Date(f.date);
+    return matchDate.getMonth() === now.getMonth() &&
+           matchDate.getFullYear() === now.getFullYear() &&
+           f.status === 'upcoming';
+  }).length;
+
+  const nextFixture = fixtures
+    .filter(f => f.status === 'upcoming')
+    .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+
+  const nextFixtureText = nextFixture
+    ? new Date(nextFixture.date).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })
+    : 'No upcoming';
+
+  // ── Helper to format fixture for display ──
+  const formatFixtureDate = (dateString) => {
+    if (!dateString) return '—';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-KE', { day: 'numeric', month: 'short' });
+  };
+
+  const formatFixtureTime = (timeString) => {
+    if (!timeString) return '—';
+    const [hours, minutes] = timeString.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes));
+    return date.toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
 
   const openModal = (tier) => { setModalTier(tier); setShowModal(true); };
 
@@ -169,10 +189,10 @@ export default function Dashboard() {
       </section>
 
       <section className="metrics-grid">
-        <Metric icon={Users}        value={loading ? '…' : totalMembers}  label="Active members"     note="From live database"  tone="blue"  />
-        <Metric icon={Megaphone}    value="312"                            label="Messages sent"      note="94.2% delivered"     tone="green" />
-        <Metric icon={CalendarPlus} value="3"                              label="Fixtures this month"note="Next: Sun 29 Jun"    tone="sky"   />
-        <Metric icon={Clock}        value={loading ? '…' : expiringSoon}   label="Expiring soon"      note="Within 7 days"       tone="red"   />
+        <Metric icon={Users}        value={membersLoading ? '…' : totalMembers}  label="Active members"     note="From live database"  tone="blue"  />
+        <Metric icon={Megaphone}    value="312"                                  label="Messages sent"      note="94.2% delivered"     tone="green" />
+        <Metric icon={CalendarPlus} value={fixturesLoading ? '…' : thisMonthFixtures} label="Fixtures this month" note={`Next: ${nextFixtureText}`} tone="sky"   />
+        <Metric icon={Clock}        value={membersLoading ? '…' : expiringSoon}   label="Expiring soon"      note="Within 7 days"       tone="red"   />
       </section>
 
       <section className="workspace-grid">
@@ -184,7 +204,7 @@ export default function Dashboard() {
             ['Bronze', bronzeCount, bronzeWidth, 'bronze'],
           ].map(([tier, count, width, tone]) => (
             <div className="tier" key={tier}>
-              <div><span className={tone}>{tier}</span><strong>{loading ? '…' : count}</strong></div>
+              <div><span className={tone}>{tier}</span><strong>{membersLoading ? '…' : count}</strong></div>
               <div className="bar"><i className={tone} style={{ width: `${width}%` }} /></div>
             </div>
           ))}
@@ -194,13 +214,28 @@ export default function Dashboard() {
         <div className="panel">
           <div className="panel-head"><h3>Upcoming fixtures</h3><Trophy size={18} /></div>
           <div className="fixture-list">
-            {FIXTURES.map(f => (
-              <article key={f.date}>
-                <time>{f.date}</time>
-                <div><strong>{f.title}</strong><span>{f.meta}</span></div>
-                <button onClick={() => showToast(`Drafting alert for ${f.title}`)}>{f.action}</button>
-              </article>
-            ))}
+            {fixturesLoading ? (
+              <p>Loading fixtures...</p>
+            ) : fixtures.length === 0 ? (
+              <p>No fixtures scheduled.</p>
+            ) : (
+              fixtures
+                .filter(f => f.status === 'upcoming')
+                .sort((a, b) => new Date(a.date) - new Date(b.date))
+                .slice(0, 5) // show latest 5
+                .map(f => (
+                  <article key={f.id}>
+                    <time>{formatFixtureDate(f.date)}</time>
+                    <div>
+                      <strong>{f.home_team} vs {f.away_team}</strong>
+                      <span>{f.venue}, {formatFixtureTime(f.time)}</span>
+                    </div>
+                    <button onClick={() => showToast(`Drafting alert for ${f.home_team} vs ${f.away_team}`)}>
+                      Alert
+                    </button>
+                  </article>
+                ))
+            )}
           </div>
         </div>
       </section>

@@ -122,3 +122,107 @@ module.exports = {
   listScheduledBroadcasts,
   updateBroadcastStatus
 };
+// ─── TEMPLATES ─────────────────────────────────────────────────────────────
+// List all templates (optionally filter by tier)
+exports.listTemplates = async (tier = null) => {
+  let query = supabase
+    .from('templates')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (tier && tier !== 'all') {
+    query = query.eq('tier', tier);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+};
+
+// Get a single template by ID
+exports.getTemplateById = async (id) => {
+  const { data, error } = await supabase
+    .from('templates')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+// Get templates by category
+exports.getTemplatesByCategory = async (category) => {
+  const { data, error } = await supabase
+    .from('templates')
+    .select('*')
+    .eq('category', category)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+};
+
+// Create a new template
+exports.createTemplate = async (templateData) => {
+  const { data, error } = await supabase
+    .from('templates')
+    .insert([{
+      name: templateData.name,
+      category: templateData.category || 'general',
+      subject: templateData.subject || null,
+      message: templateData.message,
+      tier: templateData.tier || 'all',
+      created_by: templateData.created_by || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }])
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+// Update an existing template
+exports.updateTemplate = async (id, updates) => {
+  const { data, error } = await supabase
+    .from('templates')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+// Delete a template
+exports.deleteTemplate = async (id) => {
+  const { error } = await supabase
+    .from('templates')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+  return true;
+};
+
+// Count templates by category
+exports.countTemplatesByCategory = async () => {
+  const { data, error } = await supabase
+    .from('templates')
+    .select('category', { count: 'exact', head: true })
+    .group('category');
+  if (error) throw error;
+  return data || [];
+};
+
+// ─── USERS (if you have auth) ────────────────────────────────────────────
+exports.getUserById = async (id) => {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (error) throw error;
+  return data;
+};
