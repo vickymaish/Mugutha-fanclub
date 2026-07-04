@@ -44,11 +44,13 @@ const FIXTURES = [
 ];
 
 // ── Small components ──────────────────────────────────────────────────────
-function ClubLogo({ size = 'medium' }) {
+function ClubLogo({ size = "medium" }) {
   return (
-    <div className={`club-logo ${size}`} aria-label="Mugutha Football Club logo">
-      <div className="crest-crop" />
-    </div>
+    <img
+      src="/logo.png"
+      alt="Mugutha FC"
+      className={`club-logo ${size}`}
+    />
   );
 }
 
