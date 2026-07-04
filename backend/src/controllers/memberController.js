@@ -80,7 +80,14 @@ exports.tierCounts = async (req, res, next) => {
 
 exports.sendWelcomeCard = async (req, res, next) => {
   try {
+    console.log("\n========== SEND WELCOME CARD ==========");
+    console.log("Member ID:", req.params.id);
+
     const member = await getMember(req.params.id);
+
+    console.log("===== MEMBER =====");
+    console.log(member);
+    console.log("==================");
 
     if (!member) {
       return res.status(404).json({ error: "Member not found" });
@@ -92,13 +99,19 @@ exports.sendWelcomeCard = async (req, res, next) => {
 
     const tier = (member.tier || "bronze").toLowerCase();
 
+    console.log("Tier:", tier);
+    console.log("Phone:", member.phone);
+    console.log("Name:", member.name);
+
     const masterplates = {
-      gold:   path.join(process.cwd(), "assets", "masterplate-gold.jpg"),
+      gold: path.join(process.cwd(), "assets", "masterplate-gold.jpg"),
       silver: path.join(process.cwd(), "assets", "masterplate-silver.jpg")
     };
 
-    // Bronze gets a text message only
+    // Bronze gets text only
     if (tier === "bronze") {
+      console.log("Bronze member -> sending text only...");
+
       await sendMessage({
         phone: member.phone,
         message:
@@ -106,10 +119,21 @@ exports.sendWelcomeCard = async (req, res, next) => {
           `Thank you for supporting Mugutha FC.\n\n` +
           `Your Bronze Membership is active.`
       });
-      return res.json({ success: true, tier, type: "text" });
+
+      console.log("✅ Bronze message sent");
+
+      return res.json({
+        success: true,
+        tier,
+        type: "text"
+      });
     }
 
     const memberId = `MFC-${new Date().getFullYear()}-${member.id.substring(0,6).toUpperCase()}`;
+
+    console.log("Generated Member ID:", memberId);
+
+    console.log("Generating image...");
 
     const imageBuffer = await generateMemberCard({
       masterplatePath: masterplates[tier],
@@ -118,18 +142,48 @@ exports.sendWelcomeCard = async (req, res, next) => {
       memberId
     });
 
+    console.log("✅ Image generated");
+    console.log("Image size:", imageBuffer.length);
+
+    console.log("Uploading image to Meta...");
+
     const mediaId = await uploadImage(imageBuffer);
+
+    console.log("✅ Upload complete");
+    console.log("Media ID:", mediaId);
 
     const caption =
       tier === "gold"
         ? `🏆 Welcome ${member.name}!\n\nYour Gold Membership is active.\nMember ID: ${memberId}`
         : `🥈 Welcome ${member.name}!\n\nYour Silver Membership is active.\nMember ID: ${memberId}`;
 
+    console.log("Sending image...");
+
     const messageId = await sendImage(member.phone, mediaId, caption);
 
-    res.json({ success: true, tier, type: "image", messageId });
+    console.log("✅ WhatsApp accepted image");
+    console.log("Message ID:", messageId);
+
+    res.json({
+      success: true,
+      tier,
+      type: "image",
+      messageId
+    });
 
   } catch (err) {
+    console.error("\n========== SEND CARD FAILED ==========");
+
+    if (err.response) {
+      console.error("Status:", err.response.status);
+      console.error("Meta Response:");
+      console.dir(err.response.data, { depth: null });
+    } else {
+      console.error(err);
+    }
+
+    console.error("======================================\n");
+
     next(err);
   }
 };
