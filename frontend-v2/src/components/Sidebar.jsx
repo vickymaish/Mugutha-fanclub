@@ -1,55 +1,41 @@
-import { Link, useLocation } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  Users,
-  Calendar,
-  Send,
-  FileText,
-  BarChart3,
-  Settings,
-} from 'lucide-react';
+import { Link } from 'react-router-dom'
 
 const NAV = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/members', label: 'Members', icon: Users },
-  { path: '/fixtures', label: 'Fixtures', icon: Calendar },
-  { path: '/broadcasts', label: 'Broadcasts', icon: Send },
-  { path: '/templates', label: 'Templates', icon: FileText },
-  { path: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { path: '/settings', label: 'Settings', icon: Settings },
-];
+  { path: '/', label: 'Dashboard' },
+  { path: '/members', label: 'Members' },
+  { path: '/fixtures', label: 'Fixtures' },
+  { path: '/broadcasts', label: 'Broadcasts' },
+  { path: '/templates', label: 'Templates' },
+  { path: '/analytics', label: 'Analytics' },
+  { path: '/settings', label: 'Settings' },
+]
 
 export default function Sidebar() {
-  const location = useLocation();
-
   return (
-    <aside className="w-64 bg-[#1a237e] text-white p-4 flex flex-col min-h-screen">
-      <div className="brand mb-8">
-        <h1 className="text-2xl font-bold">Mugutha FC</h1>
-        <p className="text-sm opacity-80">#MoreThanFootball</p>
+    <aside className="sidebar">
+      <div className="brand">
+        <div className="club-logo">
+          <div className="crest-crop" />
+        </div>
+        <div>
+          <h1>Mugutha FC</h1>
+          <p>#MoreThanFootball</p>
+        </div>
       </div>
-      <nav className="flex-1 space-y-1">
-        {NAV.map((item) => {
-          const Icon = item.icon;
-          const active = location.pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${
-                active ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'
-              }`}
-            >
-              <Icon size={18} />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="nav-list" aria-label="Main navigation">
+        {NAV.map(item => (
+          <Link to={item.path} key={item.label} className="nav-link">
+            {item.label}
+          </Link>
+        ))}
       </nav>
-      <div className="border-t border-white/20 pt-4 mt-auto">
-        <div className="text-sm opacity-80">Club Owner</div>
-        <div className="text-xs opacity-60">Njagi</div>
+      <div className="owner-card">
+        <div className="avatar">NJ</div>
+        <div>
+          <strong>Njagi</strong>
+          <span>Club Owner</span>
+        </div>
       </div>
     </aside>
-  );
+  )
 }
