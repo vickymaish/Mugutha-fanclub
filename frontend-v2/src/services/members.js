@@ -23,13 +23,21 @@ export async function getMember(id) {
   }
 }
 
-export async function sendMemberCard(id) {
+export async function sendMemberCard(memberId) {
   try {
-    const response = await fetch(`${API_URL}/members/${id}/send-card`, { method: 'POST' });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const response = await fetch(`${API_URL}/members/${memberId}/send-card`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP error ${response.status}`);
+    }
     return await response.json();
   } catch (error) {
     console.error('Error sending member card:', error);
-    return null;
+    throw error;
   }
 }

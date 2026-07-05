@@ -1,4 +1,6 @@
-export default function MembersTable({ members, loading }) {
+import React from 'react';
+
+export default function MembersTable({ members, loading, onSendCard, sendingCardId }) {
   if (loading) {
     return (
       <div className="loading-state">
@@ -15,13 +17,11 @@ export default function MembersTable({ members, loading }) {
     );
   }
 
-  // Helper to format the tier for display
   const formatTier = (tier) => {
     if (!tier) return "—";
     return tier.charAt(0).toUpperCase() + tier.slice(1);
   };
 
-  // Helper to format date
   const formatDate = (dateString) => {
     if (!dateString) return "—";
     const date = new Date(dateString);
@@ -32,14 +32,12 @@ export default function MembersTable({ members, loading }) {
     });
   };
 
-  // Helper to get status badge class
   const getStatusBadge = (status) => {
     if (status === "active") return "status delivered";
     if (status === "inactive") return "status pending";
     return "status pending";
   };
 
-  // Helper to format status display
   const formatStatus = (status) => {
     if (status === "active") return "Active";
     if (status === "inactive") return "Inactive";
@@ -56,6 +54,7 @@ export default function MembersTable({ members, loading }) {
             <th>Phone</th>
             <th>Joined</th>
             <th>Status</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -75,6 +74,39 @@ export default function MembersTable({ members, loading }) {
                 <span className={getStatusBadge(member.membership_status)}>
                   {formatStatus(member.membership_status)}
                 </span>
+              </td>
+              <td>
+                <div className="action-buttons">
+                  <button
+                    className="action-btn"
+                    title="View"
+                    onClick={() => alert(`View member: ${member.name}`)}
+                  >
+                    👁️
+                  </button>
+                  <button
+                    className="action-btn"
+                    title="Edit"
+                    onClick={() => alert(`Edit member: ${member.name}`)}
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    className="action-btn"
+                    title="Renew"
+                    onClick={() => alert(`Renew member: ${member.name}`)}
+                  >
+                    🔄
+                  </button>
+                  <button
+                    className={`action-btn send-card ${sendingCardId === member.id ? 'sending' : ''}`}
+                    onClick={() => onSendCard?.(member.id)} // ✅ safe call
+                    disabled={sendingCardId === member.id}
+                    title="Send Membership Card"
+                  >
+                    {sendingCardId === member.id ? '⏳ Sending...' : '🪪 Card'}
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

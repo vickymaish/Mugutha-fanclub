@@ -1825,3 +1825,47 @@ td:first-child {
     padding: 20px;
   }
 }
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fff;
+  color: var(--navy);
+  white-space: nowrap;
+}
+
+.action-btn:hover {
+  background: var(--sky);
+  border-color: var(--blue);
+}
+
+.action-btn.send-card {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+
+.action-btn.send-card:hover:not(:disabled) {
+  background: var(--blue-2);
+}
+
+.action-btn.send-card.sending {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
