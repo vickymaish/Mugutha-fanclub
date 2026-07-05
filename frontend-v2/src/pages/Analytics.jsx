@@ -11,7 +11,7 @@ export default function Analytics() {
 
   // Fetch broadcast stats
   useEffect(() => {
-    fetch('/api/broadcasts')
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/broadcasts`)
       .then(response => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
