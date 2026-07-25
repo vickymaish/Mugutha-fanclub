@@ -1,7 +1,8 @@
-const dotenv = require('dotenv');
-const path = require('path');
+require('dotenv').config();
 
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+console.log('🔍 Env check:');
+console.log('  SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ Set' : '❌ Missing');
+console.log('  SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Set' : '❌ Missing');
 
 module.exports = {
   port: process.env.PORT || 4000,

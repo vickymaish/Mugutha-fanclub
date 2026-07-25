@@ -12,10 +12,15 @@ const fixtureRoutes = require('./routes/fixtureRoutes');
 const app = express();
 // ... existing imports
 const templateRoutes = require('./routes/templateRoutes');
+const aiRoutes = require('./routes/aiRoutes');
+
+
 
 
 app.use(cors());
 app.use(bodyParser());
+
+app.use('/api/ai', aiRoutes);
 
 app.use('/api/members', memberRoutes);
 app.use('/api/broadcasts', broadcastRoutes);

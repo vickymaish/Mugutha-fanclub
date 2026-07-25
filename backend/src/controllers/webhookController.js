@@ -1,5 +1,5 @@
 const { whatsapp } = require("../config/env");
-const { supabase } = require('../config/supabase');
+const supabase = require('../config/supabase');   // ← fix here
 
 const VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
 const PHONE_NUMBER_ID = whatsapp.phoneNumberId;
@@ -106,22 +106,37 @@ async function getLiveFixtures() {
 }
 
 // ─── GET MEMBERSHIP STATUS ───
+// ─── GET MEMBERSHIP STATUS ───
+// ─── GET MEMBERSHIP STATUS ───
 async function getMembershipStatus(phone) {
   try {
+    // Normalize: remove '+', spaces, dashes, parentheses
+    const normalizedPhone = phone.replace(/[^0-9]/g, '');
+    
+    console.log(`🔍 Looking up membership for phone: "${normalizedPhone}"`);
+    
     const { data, error } = await supabase
       .from('members')
       .select('*')
-      .eq('phone', phone)
+      .eq('phone', normalizedPhone)
       .single();
 
-    if (error) return null;
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log(`📭 No member found for: ${normalizedPhone}`);
+      } else {
+        console.error(`❌ Query error:`, error.message);
+      }
+      return null;
+    }
+    
+    console.log(`✅ Found member: ${data?.name} (${data?.tier})`);
     return data;
   } catch (error) {
     console.error("❌ Error fetching membership:", error);
     return null;
   }
 }
-
 // ─── FORMAT FIXTURES RESPONSE ───
 function formatFixturesResponse(fixtures) {
   if (!fixtures || fixtures.length === 0) {
