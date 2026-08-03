@@ -1,21 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-
-const EVENT_TYPES = [
-  { value: 'match_day', label: '⚽ Match Day' },
-  { value: 'match_reminder', label: '📅 Match Reminder' },
-  { value: 'fixture_announcement', label: '📋 Fixture Announcement' },
-  { value: 'victory', label: '🏆 Victory Celebration' },
-  { value: 'player_signing', label: '✍️ Player Signing' },
-  { value: 'merch', label: '🛍️ Merchandise Launch' },
-  { value: 'membership_renewal', label: '🎫 Membership Renewal' },
-  { value: 'fundraiser', label: '💰 Fundraiser' },
-  { value: 'community_event', label: '🤝 Community Event' },
-  { value: 'club_announcement', label: '📢 Club Announcement' },
-  { value: 'training_reminder', label: '🏋️ Training Reminder' },
-  { value: 'agm', label: '📄 AGM Notice' },
-];
 
 const TEMPLATES = {
   'Match alert':        (tier) => `⚽ Match Day Alert!\n\nMugutha FC take to the pitch this weekend.\nKick-off: 3:00 PM at Mugutha Grounds.\n\nCome out and support the boys! 💙`,
@@ -45,18 +31,9 @@ export default function BroadcastModal({ isOpen, onClose, onSend, tierCounts = {
   const [msgType, setMsgType]     = useState('Match alert');
   const [message, setMessage]     = useState(TEMPLATES['Match alert']('all'));
   const [sending, setSending]     = useState(false);
-  const [result, setResult]       = useState(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [result, setResult]       = useState(null); // { sent, failed } or null
 
-  // ── AI context fields ──
-  const [eventType, setEventType] = useState('match_day');
-  const [opponent, setOpponent]   = useState('');
-  const [date, setDate]           = useState('');
-  const [time, setTime]           = useState('');
-  const [venue, setVenue]         = useState('');
-  const [extra, setExtra]         = useState('');
-
-  // Sync tier when modal opens
+  // Sync tier when modal opens with a preSelectedTier
   useEffect(() => {
     if (isOpen) {
       setTier(preSelectedTier);
@@ -65,7 +42,7 @@ export default function BroadcastModal({ isOpen, onClose, onSend, tierCounts = {
     }
   }, [isOpen, preSelectedTier]);
 
-  // Update message when template type changes
+  // Update message when type changes
   const handleTypeChange = (type) => {
     setMsgType(type);
     if (type !== 'Custom message') {
@@ -78,36 +55,6 @@ export default function BroadcastModal({ isOpen, onClose, onSend, tierCounts = {
   const recipientCount = tier === 'all'
     ? (tierCounts.total || 0)
     : (tierCounts[tier] || 0);
-
-  // ── AI Generate handler ──
-  const handleAIGenerate = async () => {
-    setIsGenerating(true);
-    try {
-      const payload = {
-        eventType,
-        opponent,
-        date,
-        time,
-        venue,
-        extra,
-      };
-      const res = await fetch(`${API}/ai/generate-message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (data.message) {
-        setMessage(data.message);
-        // Optionally set msgType to 'Custom message' so user can edit freely
-        setMsgType('Custom message');
-      }
-    } catch (error) {
-      console.error('AI generation failed:', error);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
 
   const handleSend = async () => {
     if (!message.trim()) return;
@@ -170,7 +117,7 @@ export default function BroadcastModal({ isOpen, onClose, onSend, tierCounts = {
           </div>
         </div>
 
-        {/* Message type (existing templates) */}
+        {/* Message type */}
         <div className="modal-section">
           <label className="modal-label" htmlFor="msg-type">Message type</label>
           <select
@@ -185,77 +132,6 @@ export default function BroadcastModal({ isOpen, onClose, onSend, tierCounts = {
           </select>
         </div>
 
-        {/* ── AI Context Fields ── */}
-        <div className="modal-section">
-          <label className="modal-label">AI Event Type</label>
-          <select
-            className="modal-select"
-            value={eventType}
-            onChange={(e) => setEventType(e.target.value)}
-          >
-            {EVENT_TYPES.map(et => (
-              <option key={et.value} value={et.value}>{et.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="modal-section form-row">
-          <div className="form-group">
-            <label className="modal-label">Opponent</label>
-            <input
-              type="text"
-              className="modal-input"
-              value={opponent}
-              onChange={(e) => setOpponent(e.target.value)}
-              placeholder="e.g., Ruiru United"
-            />
-          </div>
-          <div className="form-group">
-            <label className="modal-label">Date</label>
-            <input
-              type="text"
-              className="modal-input"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              placeholder="e.g., 12 July 2026"
-            />
-          </div>
-        </div>
-
-        <div className="modal-section form-row">
-          <div className="form-group">
-            <label className="modal-label">Time</label>
-            <input
-              type="text"
-              className="modal-input"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              placeholder="e.g., 3:00 PM"
-            />
-          </div>
-          <div className="form-group">
-            <label className="modal-label">Venue</label>
-            <input
-              type="text"
-              className="modal-input"
-              value={venue}
-              onChange={(e) => setVenue(e.target.value)}
-              placeholder="e.g., Mugutha Grounds"
-            />
-          </div>
-        </div>
-
-        <div className="modal-section">
-          <label className="modal-label">Extra Context (optional)</label>
-          <input
-            type="text"
-            className="modal-input"
-            value={extra}
-            onChange={(e) => setExtra(e.target.value)}
-            placeholder="e.g., Bring your drums"
-          />
-        </div>
-
         {/* Message body */}
         <div className="modal-section">
           <label className="modal-label" htmlFor="msg-body">Message</label>
@@ -268,17 +144,6 @@ export default function BroadcastModal({ isOpen, onClose, onSend, tierCounts = {
             placeholder="Write your message here…"
           />
           <div className="char-count">{message.length} characters</div>
-        </div>
-
-        {/* ✅ AI Generate Button */}
-        <div className="modal-section ai-actions">
-          <button
-            className="btn-ai-generate"
-            onClick={handleAIGenerate}
-            disabled={isGenerating}
-          >
-            {isGenerating ? '⏳ Generating...' : '✨ Generate with AI'}
-          </button>
         </div>
 
         {/* Result feedback */}

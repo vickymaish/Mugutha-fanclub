@@ -24,7 +24,7 @@ Backend runs on `http://localhost:5000`.
 
 ### Setup Frontend
 ```bash
-cd frontend
+cd frontend-v2
 npm install
 npm run dev
 ```

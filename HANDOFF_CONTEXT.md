@@ -1,6 +1,6 @@
 # Mugutha FC Platform — Handoff Context
-**Date:** 2 July 2026  
-**Status:** MVP working end-to-end. Tier-based WhatsApp broadcasts proven. Branded image delivery proven.
+**Date:** 3 August 2026  
+**Status:** MVP working end-to-end. Tier-based WhatsApp broadcasts are currently functional. Active UI is `frontend-v2`; legacy `frontend/` is deprecated.
 
 ---
 
@@ -30,78 +30,54 @@ A member management + WhatsApp automation platform for Mugutha FC (Ruiru, Kenya,
 
 ---
 
-## Files changed in this session (the important ones)
+## Key implementation files
 
 ### Backend
 
-**`src/config/env.js`**  
-Added `phoneNumberId` and `businessAccountId` to the `whatsapp` object so the Meta API URL can be constructed correctly.
-
-**`src/config/whatsapp.js`**  
-Now exports `phoneNumberId` and `businessAccountId` in addition to the original fields.
-
-**`src/services/whatsappService.js`**  
-Fully rewritten. Now supports Meta Cloud API (not mock/Twilio). Exports:
-- `sendMessage({ phone, message, title })` — plain text, only works inside a 24hr conversation window
-- `sendTemplate({ phone, templateName, languageCode })` — for first contact, opens the window
-
-**`src/services/mediaService.js`** ← NEW FILE  
-Two functions only:
-- `uploadImage(buffer)` — uploads JPEG Buffer to Meta media API, returns `media_id`
-- `sendImage(phone, mediaId, caption)` — sends image message via WhatsApp
-
-**`src/services/imageService.js`** ← NEW FILE  
-- `generateMemberCard({ masterplatePath, name, tier, memberId })` — overlays member info onto a masterplate JPEG using `sharp`, returns Buffer
-- Gold/Silver get branded image cards; Bronze gets text only
-
-**`src/services/broadcastService.js`**  
-Implemented `sendBroadcastNow` and `sendBroadcastToMembers`. Filters by tier using `listMembersByTier`. Calls `whatsappService.sendMessage` per member. Updates broadcast status to `sent` or `no_recipients`.
-
-**`src/controllers/broadcastController.js`**  
-`sendBroadcast` accepts `{ title, message, tier, send_now }`, stores `tier` in DB, returns `{ broadcast, tier, recipients, sent, failed, failures[] }`.
-
-**`src/controllers/memberController.js`**  
-Added `exports.tierCounts` — returns `{ total, gold, silver, bronze }` counts from active members. Added `listAllMembers` to imports. Also added `exports.sendWelcomeCard` which sends tier-appropriate WhatsApp (image for Gold/Silver, text for Bronze).
-
-**`src/routes/memberRoutes.js`**  
-Added `/tierCounts` route BEFORE `/:id` (critical — Express would otherwise treat "tierCounts" as a member ID and hit auth middleware).  
-Added `POST /:id/send-card` route for welcome card sends.
-
-**`src/models/supabaseQueries.js`**  
-Added `listMembersByTier(tier, status)`. Added `tier` to `BROADCAST_FIELDS`.
-
-### Database migrations run (in Supabase SQL editor)
-
-```sql
-ALTER TABLE members ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT 'bronze';
-ALTER TABLE members ADD COLUMN IF NOT EXISTS amount_paid INTEGER DEFAULT 300;
-UPDATE members SET tier = 'gold'   WHERE amount_paid >= 800;
-UPDATE members SET tier = 'silver' WHERE amount_paid >= 500 AND amount_paid < 800;
-UPDATE members SET tier = 'bronze' WHERE amount_paid < 500;
-ALTER TABLE broadcasts ADD COLUMN IF NOT EXISTS tier TEXT DEFAULT 'all';
-```
+- `backend/src/config/env.js` — loads Supabase and WhatsApp settings from `.env`
+- `backend/src/config/whatsapp.js` — exports Meta provider settings, `phoneNumberId`, and `businessAccountId`
+- `backend/src/services/whatsappService.js` — text and template WhatsApp send logic using Meta Cloud API
+- `backend/src/services/mediaService.js` — uploads images to Meta and sends WhatsApp image messages
+- `backend/src/services/imageService.js` — generates tier-branded member card JPEGs with `sharp`
+- `backend/src/services/broadcastService.js` — sends tier-based broadcasts and updates broadcast status
+- `backend/src/controllers/broadcastController.js` — handles broadcast listing, creation, and `POST /api/broadcasts/send`
+- `backend/src/controllers/memberController.js` — handles member CRUD, tier counts, and `POST /api/members/:id/send-card`
+- `backend/src/controllers/whatsappController.js` — handles `/api/whatsapp/send-test` and `/api/whatsapp/send-template`
+- `backend/src/routes/memberRoutes.js` — public `GET /`, public `GET /tierCounts`, protected CRUD routes, and `POST /:id/send-card`
+- `backend/src/routes/broadcastRoutes.js` — `GET /`, `POST /`, and `POST /send`
+- `backend/src/routes/whatsappRoutes.js` — `POST /send-test`, `POST /send-template`
+- `backend/src/app.js` — mounts `/api/*` routes, internal routes, webhook routes, and error middleware
+- `backend/src/controllers/webhookController.js` — webhook handling exists but needs production readiness and further review
 
 ### Frontend
 
-**`frontend-v2/vite.config.js`**  
-Added proxy: `/api` → `http://localhost:5000`. Without this, BroadcastModal's relative `/api/broadcasts/send` hits Vite (5173) and gets 404.
+- `frontend-v2/vite.config.js` — proxies `/api` to `http://localhost:5000`
+- `frontend-v2/src/main.jsx` — app bootstrap with `BrowserRouter`
+- `frontend-v2/src/App.jsx` — React Router routes for Dashboard, Members, Fixtures, Broadcasts, Templates, Analytics, Settings
+- `frontend-v2/src/pages/Dashboard.jsx` — dashboard UI using `useMembers` and `useFixtures`
+- `frontend-v2/src/pages/Broadcasts.jsx` — broadcasts list UI, fetches members to derive tier counts, opens `BroadcastModal`
+- `frontend-v2/src/components/BroadcastModal.jsx` — modal UI posting to `/api/broadcasts/send`
+- `frontend-v2/src/services/members.js` — member fetch helpers using `VITE_API_URL`
+- `frontend-v2/src/services/broadcasts.js` — broadcast fetch/send helpers using `VITE_API_URL`
+- `frontend-v2/src/hooks/useMembers.js` — loads member list
+- `frontend-v2/src/hooks/useBroadcasts.js` — loads broadcast list
 
-**`frontend-v2/src/main.jsx`**  
-Complete rewrite (was duplicate-mounted, causing Vite parse errors). Now:
-- Single `ReactDOM.createRoot` at the bottom
-- Fetches members from `GET /api/members` (public, no auth)
-- Derives tier counts from members array (no separate `tierCounts` endpoint call needed)
-- `openModal(tier)` wires all QuickAction buttons to `BroadcastModal`
-- Toast notification system for user feedback
-- No `fetchTierCounts` function (was causing `ReferenceError` — removed entirely)
+### Database
 
-**`frontend-v2/src/components/BroadcastModal.jsx`**  
-New component. Tier selector (All/Gold/Silver/Bronze with counts), message type dropdown, textarea with char count, posts to `/api/broadcasts/send`. Shows success/failure result.
+- `members` table includes `tier` and `amount_paid`
+- `broadcasts` table includes `tier` and `status`
+- `messages` table logs WhatsApp send status and errors
 
-### Assets
+### Frontend notes
 
-**`backend/assets/masterplate-gold.jpg`** — base image for Gold member cards  
-**`backend/assets/masterplate-silver.jpg`** — base image for Silver member cards
+- Active UI is `frontend-v2/`
+- Legacy `frontend/` is not the current implementation and should be ignored
+- `frontend-v2` uses `react-router-dom` and a dashboard route-based layout
+
+### Backend notes
+
+- WhatsApp text sends only deliver if the recipient has an open 24-hour conversation window
+- Admin must use template sends to open first contact with new numbers
 
 ---
 
@@ -161,13 +137,13 @@ This affects broadcasts — members who haven't interacted recently may not rece
 
 ## What's NOT done yet
 
-1. **Permanent Meta System User token** — highest priority, daily token refresh is not sustainable
-2. **Webhooks** — no inbound message handling yet; needed for RENEW/ORDER/INFO keyword replies and for tracking which members have open conversation windows
-3. **Broadcast result accuracy in frontend** — currently shows "sent" even when `failed > 0`; needs to check `data.sent` not `data.recipients`
-4. **Scheduled jobs audit** — `matchReminderJob.js`, `renewalReminderJob.js`, `dailyCheckJob.js` exist in `backend/src/jobs/` but were scaffolded in an earlier session and likely call old mock-shaped `sendMessage`. Need auditing before enabling.
-5. **Recent broadcasts panel** — dashboard shows static hardcoded data; should fetch from `GET /api/broadcasts` 
-6. **Members page** — nav links in sidebar don't route anywhere yet (no router installed)
-7. **Featherless AI integration** — planned for AI-generated broadcast message copy; not started
+1. **Permanent Meta System User token** — highest priority, daily token refresh is not sustainable.
+2. **Webhooks** — webhook handling exists but needs production-grade verification, payload parsing, and business flow wiring for inbound WhatsApp replies.
+3. **Scheduled jobs audit** — `backend/src/jobs/` likely still assumes old mock send behavior and must be reviewed before use.
+4. **Recent broadcasts panel** — Dashboard still uses static broadcast sample data; should fetch from `GET /api/broadcasts`.
+5. **Broadcast UI result handling** — confirm UI handles `failed > 0` cases accurately and surfaces send status clearly.
+6. **Membership import / tier sync** — verify database tier assignment rules and member import logic are aligned with business tiers.
+7. **Featherless AI integration** — planned for AI-generated broadcast copy; not started.
 
 ---
 
