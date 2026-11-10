@@ -29,16 +29,15 @@ function buildTextPayload({ phone, message, title }) {
   };
 }
 
-function buildTemplatePayload({ phone, templateName = 'hello_world', languageCode = 'en_US' }) {
+function buildTemplatePayload({ phone, templateName = 'hello_world', languageCode = 'en_US', components }) {
   const cleanPhone = String(phone).replace(/\D/g, '');
+  const template = { name: templateName, language: { code: languageCode } };
+  if (Array.isArray(components) && components.length) template.components = components;
   return {
     messaging_product: 'whatsapp',
     to: cleanPhone,
     type: 'template',
-    template: {
-      name: templateName,
-      language: { code: languageCode },
-    },
+    template,
   };
 }
 
@@ -135,7 +134,7 @@ async function sendMessage({ broadcastId = null, memberId = null, phone, message
  * Once the recipient replies to this message, sendMessage() (plain text)
  * will work for the next 24 hours.
  */
-async function sendTemplate({ broadcastId = null, memberId = null, phone, templateName = 'hello_world', languageCode = 'en_US' }) {
+async function sendTemplate({ broadcastId = null, memberId = null, phone, templateName = 'hello_world', languageCode = 'en_US', components }) {
   if (!phone) throw new Error('Missing destination phone number');
 
   const payload = {
@@ -148,7 +147,7 @@ async function sendTemplate({ broadcastId = null, memberId = null, phone, templa
   };
 
   try {
-    const response = await postToProvider(buildTemplatePayload({ phone, templateName, languageCode }));
+    const response = await postToProvider(buildTemplatePayload({ phone, templateName, languageCode, components }));
     payload.status = 'sent';
     payload.whatsapp_message_id = extractMessageId(response.data);
     await insertMessage(payload);
@@ -161,4 +160,22 @@ async function sendTemplate({ broadcastId = null, memberId = null, phone, templa
   }
 }
 
-module.exports = { sendMessage, sendTemplate };
+/**
+ * Sends one of the club's approved templates (see config/whatsappTemplates.js),
+ * filling in its variables from `values`. Example:
+ *   sendClubTemplate({ phone, memberId, name: 'renewal_reminder',
+ *     values: { name: 'James', tier: 'Gold', expires: '14 Nov 2027', amount: '2,000' } })
+ */
+async function sendClubTemplate({ broadcastId = null, memberId = null, phone, name, values }) {
+  const { buildComponents, LANGUAGE } = require('../config/whatsappTemplates');
+  return sendTemplate({
+    broadcastId,
+    memberId,
+    phone,
+    templateName: name,
+    languageCode: LANGUAGE,
+    components: buildComponents(name, values),
+  });
+}
+
+module.exports = { sendMessage, sendTemplate, sendClubTemplate };
