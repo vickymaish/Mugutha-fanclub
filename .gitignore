@@ -3,6 +3,15 @@ backend/node_modules/
 frontend/node_modules/
 frontend-v2/node_modules/
 *.env
-backend/test-output.jpg*.make
+backend/test-output.jpg
+*.make
 frontend-v2/public/*.html
 frontend-v2/public/*_files/
+.env
+members.xlsx
+*.xlsx
+
+# Vercel CLI link and pulled settings
+.vercel/
+.env.*
+!.env.example

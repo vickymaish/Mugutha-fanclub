@@ -178,4 +178,45 @@ async function sendClubTemplate({ broadcastId = null, memberId = null, phone, na
   });
 }
 
-module.exports = { sendMessage, sendTemplate, sendClubTemplate };
+/**
+ * Sends a tap-to-choose list (only inside an open 24-hour chat).
+ * rows: [{ id, title (max 24 chars), description (max 72) }]
+ */
+async function sendList({ phone, body, button, rows, header }) {
+  if (provider !== 'meta') return sendMessage({ phone, message: `${body}\n\n${rows.map((r) => `- ${r.title}: ${r.description || ''}`).join('\n')}` });
+  const payload = {
+    messaging_product: 'whatsapp',
+    to: String(phone).replace(/\D/g, ''),
+    type: 'interactive',
+    interactive: {
+      type: 'list',
+      ...(header ? { header: { type: 'text', text: header.slice(0, 60) } } : {}),
+      body: { text: body.slice(0, 1024) },
+      action: {
+        button: button.slice(0, 20),
+        sections: [{ title: 'Options', rows: rows.slice(0, 10).map((r) => ({ id: r.id, title: r.title.slice(0, 24), description: (r.description || '').slice(0, 72) })) }],
+      },
+    },
+  };
+  const response = await postToProvider(payload);
+  return extractMessageId(response.data);
+}
+
+/** Sends up to 3 reply buttons (only inside an open 24-hour chat). buttons: [{ id, title (max 20) }] */
+async function sendButtons({ phone, body, buttons }) {
+  if (provider !== 'meta') return sendMessage({ phone, message: `${body}\n\nReply: ${buttons.map((b) => b.title).join(' / ')}` });
+  const payload = {
+    messaging_product: 'whatsapp',
+    to: String(phone).replace(/\D/g, ''),
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: body.slice(0, 1024) },
+      action: { buttons: buttons.slice(0, 3).map((b) => ({ type: 'reply', reply: { id: b.id, title: b.title.slice(0, 20) } })) },
+    },
+  };
+  const response = await postToProvider(payload);
+  return extractMessageId(response.data);
+}
+
+module.exports = { sendMessage, sendTemplate, sendClubTemplate, sendList, sendButtons };

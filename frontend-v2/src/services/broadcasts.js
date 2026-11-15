@@ -1,12 +1,10 @@
+import { apiFetch } from './api';
 // Instead of hardcoding localhost:
-// const API_URL = 'http://localhost:5000/api';
 
 // Use environment variable:
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-console.log("Broadcast API URL:", API_URL);
 export async function getBroadcasts() {
   try {
-    const response = await fetch(`${API_URL}/broadcasts`);
+    const response = await apiFetch(`/broadcasts`);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
     return Array.isArray(data) ? data : [];
@@ -18,7 +16,7 @@ export async function getBroadcasts() {
 
 export async function createBroadcast(broadcastData) {
   try {
-    const response = await fetch(`${API_URL}/broadcasts/send`, {
+    const response = await apiFetch(`/broadcasts/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(broadcastData),

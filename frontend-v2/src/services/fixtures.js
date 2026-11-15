@@ -1,11 +1,10 @@
+import { apiFetch } from './api';
 // Instead of hardcoding localhost:
-// const API_URL = 'http://localhost:5000/api';
 
 // Use environment variable:
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 export async function getFixtures() {
   try {
-    const response = await fetch(`${API_URL}/fixtures`);
+    const response = await apiFetch(`/fixtures`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -19,7 +18,7 @@ export async function getFixtures() {
 
 export async function createFixture(fixtureData) {
   try {
-    const response = await fetch(`${API_URL}/fixtures`, {
+    const response = await apiFetch(`/fixtures`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -38,7 +37,7 @@ export async function createFixture(fixtureData) {
 
 export async function updateFixture(id, fixtureData) {
   try {
-    const response = await fetch(`${API_URL}/fixtures/${id}`, {
+    const response = await apiFetch(`/fixtures/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -57,7 +56,7 @@ export async function updateFixture(id, fixtureData) {
 
 export async function deleteFixture(id) {
   try {
-    const response = await fetch(`${API_URL}/fixtures/${id}`, {
+    const response = await apiFetch(`/fixtures/${id}`, {
       method: "DELETE",
     });
     if (!response.ok) {

@@ -18,7 +18,14 @@ const router = express.Router();
  *   { id: "mock-<timestamp>", to: <phone>, status: "queued" }
  */
 router.post('/mock-whatsapp', async (req, res) => {
-  const { to, message, delay } = req.body || {};
+  const { to, message, delay, template } = req.body || {};
+  if (template) {
+    // Show template sends readably: name + the filled-in values.
+    const values = (template.components || []).flatMap((c) => (c.parameters || []).map((p) => p.text));
+    console.log(`[MOCK] Template "${template.name}" to ${to}: ${values.join(' | ')}`);
+  } else if (message) {
+    console.log(`[MOCK] Text to ${to}: ${String(message).slice(0, 300)}`);
+  }
   
   // Use override delay if provided, otherwise read from env
   const delayMs = typeof delay === 'number' 

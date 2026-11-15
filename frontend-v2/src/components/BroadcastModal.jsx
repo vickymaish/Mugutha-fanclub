@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../services/api';
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const TEMPLATES = {
   'Match alert':        (tier) => `⚽ Match Day Alert!\n\nMugutha FC take to the pitch this weekend.\nKick-off: 3:00 PM at Mugutha Grounds.\n\nCome out and support the boys! 💙`,
@@ -61,7 +61,7 @@ export default function BroadcastModal({ isOpen, onClose, onSend, tierCounts = {
     setSending(true);
     setResult(null);
     try {
-      const res = await fetch(`${API}/broadcasts/send`, {
+      const res = await apiFetch(`/broadcasts/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

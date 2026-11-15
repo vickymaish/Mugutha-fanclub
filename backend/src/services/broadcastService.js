@@ -45,6 +45,10 @@ async function sendBroadcastNow(broadcast) {
     members = await listMembersByTier(tier, 'active');
   }
   
+  // Members who replied STOP don't get broadcasts.
+  // Demo members (is_demo) have fake numbers, so they never get real broadcasts.
+  members = (members || []).filter((m) => !m.opted_out && !m.is_demo);
+
   if (!members || members.length === 0) {
     throw new Error(`No active members found for tier: ${tier}`);
   }

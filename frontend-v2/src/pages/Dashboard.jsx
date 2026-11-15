@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import BroadcastModal from '../components/BroadcastModal';
-import useMembers from "../hooks/useMembers";
-import useFixtures from "../hooks/useFixtures";
+import AlertModal from '../components/fixtures/AlertModal';
+import { getSummary, sendRenewalReminders } from '../services/dashboard';
+import { getSession } from '../services/auth';
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 function Icon({ children, size = 18 }) {
@@ -30,24 +32,24 @@ const Trophy        = (p) => <Icon {...p}><path d="M8 21h8"/><path d="M12 17v4"/
 const Upload        = (p) => <Icon {...p}><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14"/></Icon>;
 const Users         = (p) => <Icon {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.8"/><path d="M16 3.3a4 4 0 0 1 0 7.4"/></Icon>;
 
-// ── Static data for broadcasts (still hardcoded, can be replaced later) ──
-const BROADCASTS = [
-  { type: 'Match alert',      audience: 'All members', time: 'Jun 22, 10:00', status: 'Delivered' },
-  { type: 'Lineup update',    audience: 'Silver+',     time: 'Jun 22, 13:00', status: 'Read'      },
-  { type: 'Merch drop',       audience: 'All members', time: 'Jun 18, 09:00', status: 'Delivered' },
-  { type: 'Renewal reminder', audience: '4 expiring',  time: 'Jun 17, 08:00', status: 'Read'      },
-  { type: 'Sponsor update',   audience: 'Gold tier',   time: 'Jun 15, 11:00', status: 'Pending'   },
-];
+// ── Helpers ────────────────────────────────────────────────────────────────
+const ksh = (n) => `KSh ${Number(n || 0).toLocaleString('en-KE')}`;
+const dayMonth = (d) => (d ? new Date(d).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' }) : '—');
+function kickoff(time) {
+  if (!time) return 'time TBC';
+  const [h, m] = time.split(':').map(Number);
+  const d = new Date(); d.setHours(h, m || 0);
+  return d.toLocaleTimeString('en-KE', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+function greetingName() {
+  const email = getSession()?.email || '';
+  const name = email.split('@')[0].split(/[._-]/)[0];
+  return name ? name.charAt(0).toUpperCase() + name.slice(1) : 'there';
+}
 
 // ── Small components ──────────────────────────────────────────────────────
-function ClubLogo({ size = "medium" }) {
-  return (
-    <img
-      src="/logo.png"
-      alt="Mugutha FC"
-      className={`club-logo ${size}`}
-    />
-  );
+function ClubLogo({ size = 'medium', name }) {
+  return <img src="/logo.png" alt={name} className={`club-logo ${size}`} />;
 }
 
 function Metric({ icon: Ic, label, value, note, tone }) {
@@ -61,9 +63,9 @@ function Metric({ icon: Ic, label, value, note, tone }) {
   );
 }
 
-function QuickAction({ icon: Ic, title, subtitle, tone, onClick }) {
+function QuickAction({ icon: Ic, title, subtitle, tone, onClick, disabled }) {
   return (
-    <button className="quick-action" onClick={onClick} type="button">
+    <button className="quick-action" onClick={onClick} type="button" disabled={disabled}>
       <span className={`quick-icon ${tone}`}><Ic size={18} /></span>
       <span><strong>{title}</strong><small>{subtitle}</small></span>
       <ChevronRight size={16} />
@@ -87,11 +89,13 @@ function Toast({ message, type }) {
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { members, loading: membersLoading } = useMembers();
-  const { fixtures, loading: fixturesLoading } = useFixtures();
-
+  const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [modalTier, setModalTier] = useState('all');
+  const [alertFor, setAlertFor] = useState(null);
+  const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
 
   const showToast = (message, type = 'success') => {
@@ -99,53 +103,32 @@ export default function Dashboard() {
     setTimeout(() => setToast({ message: '', type: 'success' }), 3500);
   };
 
-  // ── Derived counts from members ──
-  const totalMembers = members.length;
-  const goldCount = members.filter(m => m.tier === 'gold').length;
-  const silverCount = members.filter(m => m.tier === 'silver').length;
-  const bronzeCount = members.filter(m => m.tier === 'bronze').length;
+  const load = useCallback(async () => {
+    try { setData(await getSummary()); setError(''); } catch (err) { setError(err.message); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const goldWidth = totalMembers > 0 ? Math.round((goldCount / totalMembers) * 100) : 0;
-  const silverWidth = totalMembers > 0 ? Math.round((silverCount / totalMembers) * 100) : 0;
-  const bronzeWidth = totalMembers > 0 ? Math.round((bronzeCount / totalMembers) * 100) : 0;
+  const loading = !data && !error;
+  const m = data?.members || { active: 0, byTier: {}, endingIn7Days: 0, endingIn30Days: 0, lapsed: 0, optedOut: 0 };
+  const money = data?.money || {};
+  const msgs = data?.messages || {};
+  const upcoming = data?.fixtures?.upcoming || [];
+  const tiers = data?.tiers || [];
+  const club = data?.club || { name: 'Mugutha FC' };
+  const next = upcoming[0];
+  const show = (v) => (loading ? '…' : v);
 
-  const expiringSoon = members.filter(m => {
-    if (!m.renewal_date) return false;
-    const days = Math.ceil((new Date(m.renewal_date) - new Date()) / 86400000);
-    return days <= 7 && days > 0;
-  }).length;
-
-  // ── Derived counts from fixtures ──
-  const now = new Date();
-  const thisMonthFixtures = fixtures.filter(f => {
-    const matchDate = new Date(f.date);
-    return matchDate.getMonth() === now.getMonth() &&
-           matchDate.getFullYear() === now.getFullYear() &&
-           f.status === 'upcoming';
-  }).length;
-
-  const nextFixture = fixtures
-    .filter(f => f.status === 'upcoming')
-    .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
-
-  const nextFixtureText = nextFixture
-    ? new Date(nextFixture.date).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })
-    : 'No upcoming';
-
-  // ── Helper to format fixture for display ──
-  const formatFixtureDate = (dateString) => {
-    if (!dateString) return '—';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-KE', { day: 'numeric', month: 'short' });
-  };
-
-  const formatFixtureTime = (timeString) => {
-    if (!timeString) return '—';
-    const [hours, minutes] = timeString.split(':');
-    const date = new Date();
-    date.setHours(parseInt(hours), parseInt(minutes));
-    return date.toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit', hour12: true });
-  };
+  async function remindNow() {
+    setBusy(true);
+    try {
+      const r = await sendRenewalReminders();
+      showToast(r.sent ? `Renewal reminders sent to ${r.sent} member${r.sent > 1 ? 's' : ''}.` : 'No reminders were due. Each member gets one 7 days and one 1 day before.');
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const openModal = (tier) => { setModalTier(tier); setShowModal(true); };
 
@@ -153,128 +136,134 @@ export default function Dashboard() {
     <div className="dashboard-content">
       <header className="topbar">
         <div className="welcome">
-          <ClubLogo size="small" />
-          <div><p>Welcome, Wakili Eric</p><h2>Membership and matchday control center</h2></div>
+          <ClubLogo size="small" name={club.name} />
+          <div><p>Welcome, {greetingName()}</p><h2>Membership and matchday control center</h2></div>
         </div>
         <div className="top-actions">
-          <label className="search">
-            <Search size={16} />
-            <input placeholder="Search members, fixtures, messages" />
-          </label>
-          <button className="icon-button" aria-label="Notifications">
-            <Bell size={18} />{expiringSoon > 0 && <span />}
+          <button className="icon-button" aria-label="Memberships ending soon" title={`${m.endingIn7Days} memberships end within 7 days`} onClick={() => navigate('/members')}>
+            <Bell size={18} />{m.endingIn7Days > 0 && <span />}
           </button>
         </div>
       </header>
 
       <section className="hero-panel">
         <div>
-          <span className="eyebrow">Mt. Kenya Regional League</span>
-          <h2>Mugutha Football Club</h2>
-          <p>Keep supporters, members, and matchday operations moving from one calm dashboard.</p>
+          {club.league && <span className="eyebrow">{club.league}</span>}
+          <h2>{club.name}</h2>
+          <p>Supporters join, pay and get match alerts on WhatsApp. Everything they do shows up here.</p>
         </div>
-        <div className="connection-pill">
-          <MessageCircle size={16} />WhatsApp connected
+        <div className="connection-pill" title={data?.whatsapp?.mode === 'live' ? 'Messages go to real WhatsApp numbers' : 'Messages are printed in the server log, not sent'}>
+          <MessageCircle size={16} />{data?.whatsapp?.mode === 'live' ? 'WhatsApp live' : 'WhatsApp test mode'}
         </div>
       </section>
 
-      <section className="alert">
-        <ShieldAlert size={19} />
-        <p>
-          {expiringSoon > 0
-            ? `${expiringSoon} membership${expiringSoon > 1 ? 's' : ''} expire within 7 days. `
-            : 'All memberships are up to date. '}
-          <button onClick={() => openModal('all')}>Send renewal reminder</button>
-        </p>
-      </section>
+      {error && <section className="alert"><ShieldAlert size={19} /><p>Could not load the dashboard: {error}. Is the backend running?</p></section>}
+
+      {data?.demo?.members > 0 && (
+        <section className="alert">
+          <ShieldAlert size={19} />
+          <p>Showing demo data ({data.demo.members} demo members). <button onClick={() => navigate('/settings')}>Manage demo data</button></p>
+        </section>
+      )}
+
+      {!error && (
+        <section className="alert">
+          <ShieldAlert size={19} />
+          <p>
+            {m.endingIn7Days > 0
+              ? `${show(m.endingIn7Days)} membership${m.endingIn7Days > 1 ? 's' : ''} end within 7 days. Reminders go out automatically at 10 am. `
+              : 'No memberships end this week. '}
+            {m.endingIn7Days > 0 && <button onClick={remindNow} disabled={busy}>{busy ? 'Sending…' : 'Send due reminders now'}</button>}
+          </p>
+        </section>
+      )}
 
       <section className="metrics-grid">
-        <Metric icon={Users}        value={membersLoading ? '…' : totalMembers}  label="Active members"     note="From live database"  tone="blue"  />
-        <Metric icon={Megaphone}    value="312"                                  label="Messages sent"      note="94.2% delivered"     tone="green" />
-        <Metric icon={CalendarPlus} value={fixturesLoading ? '…' : thisMonthFixtures} label="Fixtures this month" note={`Next: ${nextFixtureText}`} tone="sky"   />
-        <Metric icon={Clock}        value={membersLoading ? '…' : expiringSoon}   label="Expiring soon"      note="Within 7 days"       tone="red"   />
+        <Metric icon={Users}        value={show(m.active)}                     label="Active members"       note={`${show(m.lapsed)} lapsed · ${show(m.optedOut)} replied STOP`} tone="blue"  />
+        <Metric icon={Award}        value={show(ksh(money.last12MonthsKsh))}   label="Collected, 12 months" note={`${ksh(money.thisMonthKsh)} this month · ${money.waitingForPin || 0} waiting for PIN`} tone="green" />
+        <Metric icon={CalendarPlus} value={show(upcoming.length)}              label="Upcoming matches"     note={next ? `Next: ${dayMonth(next.date)}` : 'None scheduled'} tone="sky"   />
+        <Metric icon={Megaphone}    value={show(msgs.sent30Days ?? 0)}         label="Messages, 30 days"    note={msgs.deliveredShare == null ? 'None sent yet' : `${msgs.deliveredShare}% sent without error`} tone="red"   />
       </section>
 
       <section className="workspace-grid">
         <div className="panel">
-          <div className="panel-head"><h3>Member tiers</h3><button>Import sheet</button></div>
-          {[
-            ['Gold',   goldCount,   goldWidth,   'gold'  ],
-            ['Silver', silverCount, silverWidth, 'silver'],
-            ['Bronze', bronzeCount, bronzeWidth, 'bronze'],
-          ].map(([tier, count, width, tone]) => (
-            <div className="tier" key={tier}>
-              <div><span className={tone}>{tier}</span><strong>{membersLoading ? '…' : count}</strong></div>
-              <div className="bar"><i className={tone} style={{ width: `${width}%` }} /></div>
-            </div>
-          ))}
-          <p className="muted">Annual contribution bands: Ksh 300 / 500 / 800</p>
+          <div className="panel-head"><h3>Member tiers</h3><button onClick={() => navigate('/members')}>View members</button></div>
+          {(tiers.length ? tiers : [{ key: 'gold', label: 'Gold' }, { key: 'silver', label: 'Silver' }, { key: 'bronze', label: 'Bronze' }])
+            .slice().reverse()
+            .map(({ key, label }) => {
+              const n = m.byTier?.[key] || 0;
+              const width = m.active ? Math.round((n / m.active) * 100) : 0;
+              return (
+                <div className="tier" key={key}>
+                  <div><span className={key}>{label}</span><strong>{show(n)}</strong></div>
+                  <div className="bar"><i className={key} style={{ width: `${width}%` }} /></div>
+                </div>
+              );
+            })}
+          <p className="muted">
+            {tiers.length ? `Yearly membership: ${tiers.map((t) => `${t.label} ${ksh(t.price)}`).join(' · ')}` : ''}
+            {money.mpesaKsh || money.cashKsh ? ` · Paid by M-Pesa ${ksh(money.mpesaKsh)}, cash ${ksh(money.cashKsh)}` : ''}
+          </p>
         </div>
 
         <div className="panel">
-          <div className="panel-head"><h3>Upcoming fixtures</h3><Trophy size={18} /></div>
+          <div className="panel-head"><h3>Upcoming matches</h3><button onClick={() => navigate('/fixtures')}>All fixtures</button></div>
           <div className="fixture-list">
-            {fixturesLoading ? (
-              <p>Loading fixtures...</p>
-            ) : fixtures.length === 0 ? (
-              <p>No fixtures scheduled.</p>
-            ) : (
-              fixtures
-                .filter(f => f.status === 'upcoming')
-                .sort((a, b) => new Date(a.date) - new Date(b.date))
-                .slice(0, 5) // show latest 5
-                .map(f => (
-                  <article key={f.id}>
-                    <time>{formatFixtureDate(f.date)}</time>
-                    <div>
-                      <strong>{f.home_team} vs {f.away_team}</strong>
-                      <span>{f.venue}, {formatFixtureTime(f.time)}</span>
-                    </div>
-                    <button onClick={() => showToast(`Drafting alert for ${f.home_team} vs ${f.away_team}`)}>
-                      Alert
-                    </button>
-                  </article>
-                ))
-            )}
+            {loading ? <p>Loading…</p> : upcoming.length === 0 ? (
+              <p>No matches scheduled. <button className="link-button" onClick={() => navigate('/fixtures')}>Add one</button></p>
+            ) : upcoming.map((f) => (
+              <article key={f.id}>
+                <time>{dayMonth(f.date)}</time>
+                <div>
+                  <strong>{f.home_team} vs {f.away_team}</strong>
+                  <span>{f.venue || 'Venue TBC'}, {kickoff(f.time)}</span>
+                </div>
+                <button onClick={() => setAlertFor(f)}>Alert</button>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
       <section className="bottom-grid">
         <div className="panel broadcast-panel">
-          <div className="panel-head"><h3>Recent broadcasts</h3><button>View all</button></div>
-          <table>
-            <thead><tr><th>Message</th><th>Audience</th><th>Sent</th><th>Status</th></tr></thead>
-            <tbody>
-              {BROADCASTS.map(b => (
-                <tr key={`${b.type}-${b.time}`}>
-                  <td>{b.type}</td><td>{b.audience}</td><td>{b.time}</td>
-                  <td><span className={`status ${b.status.toLowerCase()}`}>{b.status}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="panel-head"><h3>Recent broadcasts</h3><button onClick={() => navigate('/broadcasts')}>View all</button></div>
+          {(data?.broadcasts || []).length === 0 ? (
+            <p className="muted">No broadcasts yet. Match alerts and announcements you send will appear here.</p>
+          ) : (
+            <table>
+              <thead><tr><th>Message</th><th>Audience</th><th>When</th><th>Status</th></tr></thead>
+              <tbody>
+                {data.broadcasts.map((b) => (
+                  <tr key={b.id}>
+                    <td>{b.title || (b.message || '').slice(0, 40)}</td>
+                    <td>{b.tier && b.tier !== 'all' ? `${b.tier.charAt(0).toUpperCase()}${b.tier.slice(1)} tier` : 'All members'}</td>
+                    <td>{dayMonth(b.sent_at || b.scheduled_for || b.created_at)}</td>
+                    <td><span className={`status ${String(b.status || 'pending').toLowerCase()}`}>{b.status || 'pending'}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         <div className="panel actions-panel">
           <div className="panel-head"><h3>Quick actions</h3><Award size={18} /></div>
-          <QuickAction icon={Trophy} title="Send matchday alert"  subtitle={`All ${totalMembers} active members`}    tone="blue" onClick={() => openModal('all')}    />
-          <QuickAction icon={Bell}   title="Renewal reminders"    subtitle={`${expiringSoon} members expiring soon`} tone="red"  onClick={() => openModal('all')}    />
-          <QuickAction icon={Award}  title="Gold tier broadcast"  subtitle={`${goldCount} premium supporters`}       tone="gold" onClick={() => openModal('gold')}   />
-          <QuickAction icon={Upload} title="Import member sheet"  subtitle="Update from Excel"                       tone="sky"  onClick={() => showToast('Use the import script in /scripts')} />
+          <QuickAction icon={Trophy} title="Send match alert"      subtitle={next ? `${next.home_team} vs ${next.away_team}` : 'Add a match first'} tone="blue" onClick={() => (next ? setAlertFor(next) : navigate('/fixtures'))} />
+          <QuickAction icon={Bell}   title="Renewal reminders"     subtitle={`${m.endingIn30Days} end within 30 days`}                              tone="red"  onClick={remindNow} disabled={busy} />
+          <QuickAction icon={Award}  title="Gold tier broadcast"   subtitle={`${m.byTier?.gold || 0} gold supporters`}                              tone="gold" onClick={() => openModal('gold')} />
+          <QuickAction icon={Upload} title="Record cash payment"   subtitle="Money collected at the gate"                                           tone="sky"  onClick={() => navigate('/payments')} />
         </div>
       </section>
 
       <BroadcastModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        onSend={() => {
-          setShowModal(false);
-          showToast('Broadcast sent successfully!');
-        }}
-        tierCounts={{ total: totalMembers, gold: goldCount, silver: silverCount, bronze: bronzeCount }}
+        onSend={() => { setShowModal(false); showToast('Broadcast sent.'); load(); }}
+        tierCounts={{ total: m.active, gold: m.byTier?.gold || 0, silver: m.byTier?.silver || 0, bronze: m.byTier?.bronze || 0 }}
         preSelectedTier={modalTier}
       />
+      {alertFor && <AlertModal fixture={alertFor} onClose={() => setAlertFor(null)} onSent={load} />}
 
       <Toast message={toast.message} type={toast.type} />
     </div>

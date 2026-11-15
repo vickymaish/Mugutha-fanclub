@@ -1,5 +1,9 @@
 const { whatsapp } = require("../config/env");
 const supabase = require('../config/supabase');   // ← fix here
+const joinFlow = require('../services/joinFlow');
+const optOut = require('../services/optOut');
+const { TIERS, formatKsh } = require('../config/tiers');
+const TIER_PRICES = Object.values(TIERS).map((t) => `${t.label} KES ${formatKsh(t.price)}`).join(' · ');
 
 const VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
 const PHONE_NUMBER_ID = whatsapp.phoneNumberId;
@@ -219,7 +223,7 @@ async function processCommand(from, text) {
   }
 
   // ── MEMBERSHIP ──
-  if (['membership', 'uanachama', 'status', 'member', 'join', '2'].includes(mappedCommand)) {
+  if (['membership', 'uanachama', 'status', 'member', '2'].includes(mappedCommand)) {
     const member = await getMembershipStatus(from);
     
     if (!member) {
@@ -228,7 +232,7 @@ async function processCommand(from, text) {
 *Not a member yet?* 🤔
 
 Join Mugutha FC today!
-💰 Fees: KES 2,500/season
+💰 ${TIER_PRICES} per season
 
 🎁 *Benefits:*
 • Free entry to all home matches
@@ -406,9 +410,15 @@ exports.handle = async (req, res) => {
       return;
     }
 
-    // Get sender info
+    // Get sender info. Taps on lists, buttons and template buttons arrive as
+    // 'interactive' or 'button' messages; treat their titles as typed text.
     const from = message.from;
-    const text = message.text?.body || null;
+    const replyId = message.interactive?.list_reply?.id || message.interactive?.button_reply?.id || message.button?.payload || null;
+    const text = message.text?.body
+      || message.interactive?.list_reply?.title
+      || message.interactive?.button_reply?.title
+      || message.button?.text
+      || null;
     const name = body.entry?.[0]
       ?.changes?.[0]
       ?.value
@@ -423,8 +433,12 @@ exports.handle = async (req, res) => {
     console.log(`Type: ${message.type}`);
     console.log("=============================\n");
 
+    // STOP / START first, then the join, pay and card conversation.
+    if (text && await optOut.handle({ from, text })) return;
+    if (text && await joinFlow.handle({ from, text, replyId })) return;
+
     // Handle non-text messages
-    if (message.type !== "text" || !text) {
+    if (!text) {
       await sendWhatsAppMessage(
         from,
         "📱 We currently support text messages. Tuma ujumbe wa maandishi ili tukusaidie.\n\nReply 'MENU' to see options."

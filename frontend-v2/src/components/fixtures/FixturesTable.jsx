@@ -90,13 +90,20 @@ export default function FixturesTable({ fixtures, loading, onSendAlert }) {
               </td>
               <td>
                 {canSendAlert(fixture.status) ? (
+                  <>
                   <button
                     className="btn-alert"
                     onClick={() => onSendAlert(fixture)}
-                    title="Send WhatsApp alert to all members"
+                    title="Preview and send the WhatsApp match alert"
                   >
                     📢 Send Alert
                   </button>
+                  {(fixture.alert_day_before_at || fixture.alert_matchday_at) && (
+                    <div className="text-muted" style={{ fontSize: 11, marginTop: 4 }}>
+                      Auto alerts: {fixture.alert_day_before_at ? 'day before ✓' : 'day before ·'} {fixture.alert_matchday_at ? 'match day ✓' : ''}
+                    </div>
+                  )}
+                  </>
                 ) : (
                   <span className="text-muted">—</span>
                 )}

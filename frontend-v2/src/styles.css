@@ -1928,3 +1928,82 @@ td:first-child {
 .modal-section .form-group {
   margin-bottom: 0;
 }
+/* ── Admin sign in ───────────────────────────────────────── */
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: radial-gradient(900px 500px at 20% 10%, var(--navy-2), var(--navy) 70%);
+}
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--panel);
+  border-radius: 20px;
+  padding: 32px 28px 26px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, .35);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.login-crest { width: 72px; height: 72px; align-self: center; }
+.login-card h1 { margin: 0; text-align: center; color: var(--ink); font-size: 24px; }
+.login-sub { margin: -8px 0 6px; text-align: center; color: var(--muted); }
+.login-card label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14px; color: var(--ink); }
+.login-card input {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 12px;
+  font: inherit;
+  font-weight: 400;
+}
+.login-card input:focus { outline: 2px solid var(--blue); outline-offset: 1px; border-color: transparent; }
+.login-card button {
+  margin-top: 4px;
+  border: 0;
+  border-radius: 10px;
+  padding: 12px;
+  font: inherit;
+  font-weight: 700;
+  color: #fff;
+  background: var(--blue);
+  cursor: pointer;
+}
+.login-card button:disabled { opacity: .7; cursor: wait; }
+.login-error { margin: 0; color: var(--red); font-size: 14px; }
+.login-note { margin: 0; text-align: center; color: var(--muted); font-size: 12.5px; }
+
+.owner-meta { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.owner-meta strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.signout {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  opacity: .75;
+  font: inherit;
+  font-size: 12.5px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.signout:hover { opacity: 1; }
+
+/* ── Payments ───────────────────────────────────────────── */
+.status.waiting { background: #fff6e0; color: #8a5a00; }
+.status.failed { background: #fdecef; color: var(--red); }
+.page-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.page-actions .btn-secondary {
+  padding: 8px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+.page-actions .btn-secondary:hover { background: var(--sky); }
+
+/* Text-style button inside sentences */
+.link-button { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }

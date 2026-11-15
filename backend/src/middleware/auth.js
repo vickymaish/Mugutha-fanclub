@@ -1,6 +1,9 @@
 const supabase = require('../config/supabase');
 
 module.exports = async function auth(req, res, next) {
+  // Already checked by requireAdmin for every /api route.
+  if (req.user) return next();
+
   const authHeader = req.headers.authorization || '';
   const token = authHeader.replace('Bearer ', '').trim();
 

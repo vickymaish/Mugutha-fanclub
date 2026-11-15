@@ -9,6 +9,10 @@ join_date,
 membership_status,
 tier,
 amount_paid,
+expires_at,
+member_number,
+is_demo,
+opted_out,
 created_at,
 updated_at
 `;

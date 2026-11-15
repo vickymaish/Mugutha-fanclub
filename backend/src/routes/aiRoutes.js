@@ -16,9 +16,16 @@ try {
   voiceGuide = null;
 }
 
-const client = new OpenAI({
-  baseURL: "https://api.featherless.ai/v1",
-  apiKey: process.env.FEATHERLESS_API_KEY,
+// The AI writer is optional: without FEATHERLESS_API_KEY the server still starts,
+// and this feature answers "not set up" instead of crashing everything.
+const client = process.env.FEATHERLESS_API_KEY
+  ? new OpenAI({ baseURL: "https://api.featherless.ai/v1", apiKey: process.env.FEATHERLESS_API_KEY })
+  : null;
+if (!client) console.warn('AI message writer is off: FEATHERLESS_API_KEY is not set.');
+
+router.use((req, res, next) => {
+  if (!client) return res.status(503).json({ error: 'The AI message writer is not set up (FEATHERLESS_API_KEY missing).' });
+  next();
 });
 
 // Model selection via environment variable (fallback to Qwen)

@@ -1,6 +1,12 @@
 const  supabase  = require('../config/supabase');
-//const { sendWhatsAppMessage } = require('./webhookController');
-const { sendWhatsAppMessage } = require('../controllers/webhookController');
+const matchAlerts = require('../services/matchAlertService');
+// Map pin numbers from the form: empty -> null.
+function coord(value) {
+  if (value === '' || value == null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 // Get all fixtures
 exports.getAllFixtures = async (req, res) => {
   try {
@@ -41,7 +47,7 @@ exports.getFixtureById = async (req, res) => {
 // Create a new fixture
 exports.createFixture = async (req, res) => {
   try {
-    const { home_team, away_team, venue, date, time, competition, status } = req.body;
+    const { home_team, away_team, venue, date, time, competition, status, venue_lat, venue_lng } = req.body;
     
     const { data, error } = await supabase
       .from('fixtures')
@@ -52,7 +58,9 @@ exports.createFixture = async (req, res) => {
         date, 
         time, 
         competition, 
-        status: status || 'upcoming' 
+        status: status || 'upcoming',
+        venue_lat: coord(venue_lat),
+        venue_lng: coord(venue_lng)
       }])
       .select();
 
@@ -68,7 +76,7 @@ exports.createFixture = async (req, res) => {
 exports.updateFixture = async (req, res) => {
   try {
     const { id } = req.params;
-    const { home_team, away_team, venue, date, time, competition, status, home_score, away_score } = req.body;
+    const { home_team, away_team, venue, date, time, competition, status, home_score, away_score, venue_lat, venue_lng } = req.body;
     
     const { data, error } = await supabase
       .from('fixtures')
@@ -81,7 +89,9 @@ exports.updateFixture = async (req, res) => {
         competition, 
         status,
         home_score,
-        away_score
+        away_score,
+        venue_lat: venue_lat === undefined ? undefined : coord(venue_lat),
+        venue_lng: venue_lng === undefined ? undefined : coord(venue_lng)
       })
       .eq('id', id)
       .select();
@@ -114,87 +124,26 @@ exports.deleteFixture = async (req, res) => {
   }
 };
 
-// Send alert for a fixture
-// ─── SEND FIXTURE ALERT TO ALL MEMBERS ───
-exports.sendFixtureAlert = async (req, res) => {
+// ─── MATCH ALERTS (see services/matchAlertService.js) ───
+
+// Preview: the message, the weather forecast and how many members will get it.
+exports.previewFixtureAlert = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { message } = req.body;
-
-    // 1. Get the fixture details (for logging)
-    const { data: fixture, error: fixtureError } = await supabase
-      .from('fixtures')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (fixtureError) throw fixtureError;
-    if (!fixture) {
-      return res.status(404).json({ error: 'Fixture not found' });
-    }
-
-    // 2. Get all active members
-    const { data: members, error: membersError } = await supabase
-      .from('members')
-      .select('phone, name, tier')
-      .eq('membership_status', 'active');
-
-    if (membersError) throw membersError;
-
-    if (!members || members.length === 0) {
-      return res.status(404).json({ 
-        error: 'No active members found. Cannot send alert.' 
-      });
-    }
-
-    // 3. Send WhatsApp message to each active member
-    let sentCount = 0;
-    let failedCount = 0;
-
-    for (const member of members) {
-      // Build personalized message with member name
-      const personalizedMessage = `${message}\n\n👋 ${member.name}, we hope to see you there!`;
-
-      const result = await sendWhatsAppMessage(member.phone, personalizedMessage);
-      
-      if (result) {
-        sentCount++;
-      } else {
-        failedCount++;
-        console.error(`❌ Failed to send to ${member.phone}`);
-      }
-    }
-
-    // 4. Log the broadcast in the database
-    await supabase
-      .from('broadcasts')
-      .insert([{
-        type: 'Match alert',
-        audience: 'All active members',
-        message: message,
-        sent_at: new Date(),
-        status: 'sent',
-        recipient_count: members.length,
-        fixture_id: id,
-        fixture_title: `${fixture.home_team} vs ${fixture.away_team}`
-      }]);
-
-    console.log(`✅ Match alert sent: ${sentCount} members, ${failedCount} failed`);
-
-    // 5. Return success response
-    res.json({
-      success: true,
-      sent: sentCount,
-      failed: failedCount,
-      total: members.length,
-      message: `Alert sent to ${sentCount} members`
-    });
-
+    res.json(await matchAlerts.previewAlert(req.params.id));
   } catch (error) {
-    console.error('❌ Error sending fixture alert:', error);
-    res.status(500).json({ 
-      error: error.message,
-      details: 'Check server logs for more info'
-    });
+    next(error);
+  }
+};
+
+// Send the match-day alert to every active member who hasn't replied STOP.
+exports.sendFixtureAlert = async (req, res, next) => {
+  try {
+    const result = await matchAlerts.sendFixtureAlert(req.params.id, { kind: 'manual' });
+    if (!result.total) {
+      return res.status(400).json({ error: 'No active members to alert yet.' });
+    }
+    res.json({ success: true, ...result, message: `Alert sent to ${result.sent} members` });
+  } catch (error) {
+    next(error);
   }
 };

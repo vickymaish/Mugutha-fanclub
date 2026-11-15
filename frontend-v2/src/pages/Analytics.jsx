@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import useMembers from '../hooks/useMembers';
 import useFixtures from '../hooks/useFixtures';
+import { apiFetch } from '../services/api';
 
 export default function Analytics() {
   const { members, loading: membersLoading } = useMembers();
@@ -11,7 +12,7 @@ export default function Analytics() {
 
   // Fetch broadcast stats
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/broadcasts`)
+    apiFetch(`/broadcasts`)
       .then(response => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

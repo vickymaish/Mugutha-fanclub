@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import useBroadcasts from '../hooks/useBroadcasts';
 import BroadcastList from '../components/broadcasts/BroadcastList';
 import BroadcastModal from '../components/BroadcastModal';
+import { apiFetch } from '../services/api';
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 export default function Broadcasts() {
   const { broadcasts, loading, refreshBroadcasts } = useBroadcasts();
@@ -15,7 +15,7 @@ export default function Broadcasts() {
   useEffect(() => {
     async function fetchMemberCounts() {
       try {
-        const res = await fetch(`${API}/members`);
+        const res = await apiFetch(`/members`);
         if (!res.ok) throw new Error('Failed to fetch members');
         const members = await res.json();
         
