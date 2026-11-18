@@ -1,5 +1,15 @@
 const  supabase  = require('../config/supabase');
 const matchAlerts = require('../services/matchAlertService');
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function validFixtureId(id) {
+  return UUID_PATTERN.test(id);
+}
+
+function invalidFixtureId(res) {
+  return res.status(400).json({ error: 'Invalid fixture id' });
+}
+
 // Map pin numbers from the form: empty -> null.
 function coord(value) {
   if (value === '' || value == null) return null;
@@ -128,6 +138,8 @@ exports.deleteFixture = async (req, res) => {
 
 // Preview: the message and how many members will get it.
 exports.previewFixtureAlert = async (req, res, next) => {
+  if (!validFixtureId(req.params.id)) return invalidFixtureId(res);
+
   try {
     res.json(await matchAlerts.previewAlert(req.params.id));
   } catch (error) {
@@ -137,6 +149,8 @@ exports.previewFixtureAlert = async (req, res, next) => {
 
 // Send the match-day alert to every active member who hasn't replied STOP.
 exports.sendFixtureAlert = async (req, res, next) => {
+  if (!validFixtureId(req.params.id)) return invalidFixtureId(res);
+
   try {
     const result = await matchAlerts.sendFixtureAlert(req.params.id, { kind: 'manual' });
     if (!result.total) {

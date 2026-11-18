@@ -2,17 +2,15 @@
 
 ## Results
 
-- Passing: 29
-- Skipped: 1
+- Passing: 33
+- Skipped: 0
 - Failing: 0
 
-## BUG found
+## Issue fixed
 
-- **File/function:** `src/controllers/fixtureController.js`, `previewFixtureAlert` (with the missing-fixture error originating in `src/services/matchAlertService.js`, `getFixture`).
-- **What happens:** Requesting an alert preview for an unknown fixture returns HTTP 500. `getFixture` throws the Supabase `PGRST116` error and `previewFixtureAlert` forwards it to the error middleware.
-- **What should happen:** Return a client error (preferably 404) for a fixture that does not exist.
-- **How to reproduce:** `GET /api/fixtures/unknown/alert-preview` with an authenticated admin in the running API. The isolated Supertest route test reproduces the same status without authentication.
-- A test for the expected 4xx is retained as `test.skip` with a `BUG:` description; application behavior was not changed.
+- **File/function:** `src/services/matchAlertService.js`, `getFixture`; `src/controllers/fixtureController.js`, `previewFixtureAlert` and `sendFixtureAlert`.
+- **Change:** UUID-formatted fixture IDs that do not exist now return HTTP 404 with `{"error":"Fixture not found"}` for both alert preview and send. IDs that are not UUID-formatted return HTTP 400 with `{"error":"Invalid fixture id"}`.
+- **Coverage:** Supertest tests exercise missing and malformed IDs for both routes.
 
 ## Not tested
 

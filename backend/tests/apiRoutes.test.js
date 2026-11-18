@@ -28,6 +28,8 @@ const fixtureRoutes = require('../src/routes/fixtureRoutes');
 const paymentRoutes = require('../src/routes/paymentRoutes');
 const errorMiddleware = require('../src/middleware/errorMiddleware');
 
+const FIXTURE_ID = '550e8400-e29b-41d4-a716-446655440000';
+
 function createApp() {
   const app = express();
   app.use(express.json());
@@ -50,7 +52,7 @@ describe('backend API routes', () => {
     db.seed('payments', []);
     db.seed('messages', []);
     db.seed('fixtures', [
-      { id: 'fixture-1', home_team: 'Mugutha FC', away_team: 'Kahawa United', venue: 'Mugutha Grounds', venue_lat: 1, venue_lng: 36, date: '2030-06-15', time: '15:00', status: 'upcoming' },
+      { id: FIXTURE_ID, home_team: 'Mugutha FC', away_team: 'Kahawa United', venue: 'Mugutha Grounds', venue_lat: 1, venue_lng: 36, date: '2030-06-15', time: '15:00', status: 'upcoming' },
     ]);
     db.seed('broadcasts', []);
   });
@@ -66,7 +68,7 @@ describe('backend API routes', () => {
   });
 
   test('GET /api/fixtures/:id/alert-preview returns a preview using the fixture and recipients', async () => {
-    const response = await request(app).get('/api/fixtures/fixture-1/alert-preview');
+    const response = await request(app).get(`/api/fixtures/${FIXTURE_ID}/alert-preview`);
 
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({
@@ -84,10 +86,29 @@ describe('backend API routes', () => {
     expect(response.body).toMatchObject([{ id: 'member-1' }]);
   });
 
-  test.skip('BUG: GET /api/fixtures/:id/alert-preview returns 500 instead of a client error for an unknown fixture', async () => {
-    const response = await request(app).get('/api/fixtures/unknown/alert-preview');
+  test('GET /api/fixtures/:id/alert-preview returns 404 for a missing fixture', async () => {
+    const response = await request(app)
+      .get('/api/fixtures/550e8400-e29b-41d4-a716-446655440001/alert-preview');
 
-    expect(response.status).toBeGreaterThanOrEqual(400);
-    expect(response.status).toBeLessThan(500);
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ error: 'Fixture not found' });
+  });
+
+  test('POST /api/fixtures/:id/alert returns 404 for a missing fixture', async () => {
+    const response = await request(app)
+      .post('/api/fixtures/550e8400-e29b-41d4-a716-446655440001/alert');
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ error: 'Fixture not found' });
+  });
+
+  test.each([
+    ['GET', '/api/fixtures/not-a-uuid/alert-preview'],
+    ['POST', '/api/fixtures/not-a-uuid/alert'],
+  ])('%s %s returns 400 for an invalid fixture id', async (method, route) => {
+    const response = await request(app)[method.toLowerCase()](route);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: 'Invalid fixture id' });
   });
 });

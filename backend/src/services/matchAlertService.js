@@ -106,8 +106,13 @@ function firstName(name) {
 }
 
 async function getFixture(id) {
-  const { data, error } = await supabase.from('fixtures').select('*').eq('id', id).single();
+  const { data, error } = await supabase.from('fixtures').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
+  if (!data) {
+    const notFound = new Error('Fixture not found');
+    notFound.status = 404;
+    throw notFound;
+  }
   return data;
 }
 
