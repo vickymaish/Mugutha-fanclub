@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { apiFetch } from '../../services/api'
 
-// Shows exactly what members will get (message, weather, directions link and
+// Shows exactly what members will get (message, directions link and
 // how many members) before the admin sends a match-day alert.
 export default function AlertModal({ fixture, onClose, onSent }) {
   const [preview, setPreview] = useState(null)
@@ -46,7 +46,7 @@ export default function AlertModal({ fixture, onClose, onSent }) {
           <button type="button" className="modal-close" onClick={onClose} aria-label="Close">×</button>
         </div>
 
-        {!preview && !result && <div className="modal-section"><p>Loading preview and weather…</p></div>}
+        {!preview && !result && <div className="modal-section"><p>Loading preview…</p></div>}
 
         {preview && (
           <>
@@ -58,10 +58,6 @@ export default function AlertModal({ fixture, onClose, onSent }) {
                 <div style={{ marginTop: 8, color: '#64748b', fontSize: 12 }}>Reply STOP to stop these messages</div>
                 <a href={preview.mapUrl} target="_blank" rel="noreferrer" style={{ display: 'block', marginTop: 8, textAlign: 'center', fontWeight: 600 }}>📍 Get directions</a>
               </div>
-            </div>
-            <div className="modal-section">
-              <span className="modal-label">Weather</span>
-              <p style={{ margin: 0 }}>{preview.hasForecast ? preview.weather : 'No forecast yet. It becomes available about 2 weeks before the match. Automatic alerts the day before and on match day will include it.'}</p>
             </div>
             <div className="modal-section">
               <span className="modal-label">Goes to</span>

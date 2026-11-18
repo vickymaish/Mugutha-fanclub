@@ -3,7 +3,7 @@ import { createFixture } from '../../services/fixtures'
 
 // Add a match. The map pin is optional: without it, home games use the club's
 // ground (CLUB_GROUND_LAT/LNG in the backend .env) and away games are looked up
-// by name. With it, the weather forecast and "Get directions" are exact.
+// by name. With it, the "Get directions" link points to the exact location.
 export default function FixtureModal({ onClose, onSaved }) {
   const [form, setForm] = useState({
     home_team: 'Mugutha FC', away_team: '', date: '', time: '15:00',
@@ -73,7 +73,7 @@ export default function FixtureModal({ onClose, onSaved }) {
         <div className="modal-section">
           <label className="modal-label" htmlFor="fx-pin">Map pin (optional)</label>
           <input id="fx-pin" className="modal-select" value={form.pin} onChange={set('pin')} placeholder="-1.1520, 36.9615" />
-          <small className="text-muted">In Google Maps, right-click the ground and click the numbers to copy them. Used for the weather forecast and directions.</small>
+          <small className="text-muted">In Google Maps, right-click the ground and click the numbers to copy them. Used for directions.</small>
         </div>
         <div className="modal-section">
           <label className="modal-label" htmlFor="fx-comp">Competition (optional)</label>

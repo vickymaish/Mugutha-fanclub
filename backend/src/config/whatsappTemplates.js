@@ -20,13 +20,13 @@ const STOP_FOOTER = 'Reply STOP to stop these messages';
 const TEMPLATES = {
   match_day_alert: {
     category: 'MARKETING',
-    params: ['name', 'opponent', 'when', 'venue', 'weather'],
+    params: ['name', 'opponent', 'when', 'venue'],
     components: [
       { type: 'HEADER', format: 'TEXT', text: 'Match day is coming' },
       {
         type: 'BODY',
-        text: 'Hi {{1}}, Mugutha FC plays {{2}} on {{3}} at {{4}}. Weather forecast: {{5}}. Come with your voice and bring a friend. Tuko pamoja!',
-        example: { body_text: [['James', 'Kahawa United', 'Saturday 15 Nov, 3:00 pm', 'Mugutha Grounds, Ruiru', '24°C, light rain likely']] },
+        text: 'Hi {{1}}, Mugutha FC plays {{2}} on {{3}} at {{4}}. Come with your voice and bring a friend. Tuko pamoja!',
+        example: { body_text: [['James', 'Kahawa United', 'Saturday 15 Nov, 3:00 pm', 'Mugutha Grounds, Ruiru']] },
       },
       { type: 'FOOTER', text: STOP_FOOTER },
       {

@@ -126,7 +126,7 @@ exports.deleteFixture = async (req, res) => {
 
 // ─── MATCH ALERTS (see services/matchAlertService.js) ───
 
-// Preview: the message, the weather forecast and how many members will get it.
+// Preview: the message and how many members will get it.
 exports.previewFixtureAlert = async (req, res, next) => {
   try {
     res.json(await matchAlerts.previewAlert(req.params.id));

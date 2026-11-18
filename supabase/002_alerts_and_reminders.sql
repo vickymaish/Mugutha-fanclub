@@ -4,7 +4,7 @@
 
 -- ── Fixtures: where the ground is, and which alerts went out ──────────────
 -- venue_lat / venue_lng: the ground's map pin (right-click the ground in Google
--- Maps and copy the two numbers). Used for the weather forecast and directions.
+-- Maps and copy the two numbers). Used for directions.
 alter table fixtures add column if not exists venue_lat double precision;
 alter table fixtures add column if not exists venue_lng double precision;
 -- Set when each automatic alert is sent, so nobody gets the same alert twice.

@@ -1,7 +1,6 @@
 'use strict';
 
-// Match-day alerts: "Mugutha FC plays X on Saturday 15 Nov, 3:00 pm at Y.
-// Weather forecast: 24°C, light rain likely" plus a "Get directions" button.
+// Match-day alerts include the fixture details and a "Get directions" button.
 //
 // Sent automatically (jobs/matchReminderJob.js): the evening before and the
 // morning of each match. Also sent on demand from the dashboard's Fixtures page.
@@ -9,7 +8,7 @@
 
 const supabase = require('../config/supabase');
 const { sendClubTemplate } = require('./whatsappService');
-const { forecastAt, geocode } = require('./weatherService');
+const { geocode } = require('./locationService');
 
 const TIMEZONE = 'Africa/Nairobi';
 const CLUB_NAME = process.env.CLUB_NAME || 'Mugutha FC';
@@ -74,23 +73,17 @@ async function venueCoords(fixture) {
   try { return await geocode(venue); } catch { return null; }
 }
 
-/** Builds everything the alert needs. Never throws on weather problems. */
+/** Builds the fixture details and directions link for an alert. */
 async function buildAlert(fixture) {
   const coords = await venueCoords(fixture);
-  let weather = null;
-  try { weather = coords ? await forecastAt({ ...coords, kickoff: kickoffLocal(fixture) }) : null; } catch (err) {
-    console.error('Weather lookup failed:', err.message);
-  }
   const venue = fixture.venue || 'the usual ground';
   const mapQuery = coords ? `${coords.lat},${coords.lng}` : `${venue} Kenya`;
   return {
     opponent: opponentOf(fixture),
     when: whenText(fixture),
     venue,
-    weather: weather ? weather.text : 'not available yet, check closer to the day',
     mapQuery,
     mapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`,
-    hasForecast: Boolean(weather),
   };
 }
 
@@ -118,7 +111,7 @@ async function getFixture(id) {
   return data;
 }
 
-/** What the dashboard shows before sending: the message, weather and how many members get it. */
+/** What the dashboard shows before sending: the message and recipient count. */
 async function previewAlert(fixtureId) {
   const fixture = await getFixture(fixtureId);
   const alert = await buildAlert(fixture);
@@ -127,7 +120,7 @@ async function previewAlert(fixtureId) {
     ...alert,
     recipients: recipients.length,
     text: `Hi James, ${CLUB_NAME} plays ${alert.opponent} on ${alert.when} at ${alert.venue}. ` +
-      `Weather forecast: ${alert.weather}. Come with your voice and bring a friend. Tuko pamoja!`,
+      'Come with your voice and bring a friend. Tuko pamoja!',
   };
 }
 
@@ -156,7 +149,7 @@ async function sendFixtureAlert(fixtureOrId, { kind = 'manual' } = {}) {
         phone: member.phone,
         memberId: member.id,
         name: 'match_day_alert',
-        values: { name: firstName(member.name), opponent: alert.opponent, when: alert.when, venue: alert.venue, weather: alert.weather, mapQuery: alert.mapQuery },
+        values: { name: firstName(member.name), opponent: alert.opponent, when: alert.when, venue: alert.venue, mapQuery: alert.mapQuery },
       });
       sent += 1;
     } catch (err) {
@@ -169,7 +162,7 @@ async function sendFixtureAlert(fixtureOrId, { kind = 'manual' } = {}) {
   try {
     await supabase.from('broadcasts').insert([{
       title: `Match alert: ${CLUB_NAME} vs ${alert.opponent}`,
-      message: `${alert.when} at ${alert.venue}. Weather: ${alert.weather}`,
+      message: `${CLUB_NAME} vs ${alert.opponent} on ${alert.when} at ${alert.venue}.`,
       status: 'sent',
       sent_at: new Date().toISOString(),
     }]);
@@ -178,7 +171,7 @@ async function sendFixtureAlert(fixtureOrId, { kind = 'manual' } = {}) {
   }
 
   console.log(`Match alert (${kind}) for ${CLUB_NAME} vs ${alert.opponent}: ${sent} sent, ${failed} failed`);
-  return { sent, failed, total: recipients.length, weather: alert.weather };
+  return { sent, failed, total: recipients.length };
 }
 
 /** Nairobi calendar date, offset by `days`: "2026-11-21". */

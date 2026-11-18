@@ -17,7 +17,7 @@ router.put('/:id', fixtureController.updateFixture);
 // DELETE fixture
 router.delete('/:id', fixtureController.deleteFixture);
 
-// Match-day alert: preview (message, weather, recipients), then send.
+// Match-day alert: preview (message, recipients), then send.
 router.get('/:id/alert-preview', fixtureController.previewFixtureAlert);
 router.post('/:id/alert', fixtureController.sendFixtureAlert);
 
